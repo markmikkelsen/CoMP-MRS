@@ -1,47 +1,69 @@
 %compMRS_DPproc.m
-
+%
 %Jamie Near, Sunnybrook Research Institute, 2025
 %Diana Rotaru, Columbia University, 2025
 %Thanh Phong Lê, CIBM Center for Biomedical Imaging and École polytechnique fédérale de Lausanne, 2025
 %
-
-
-% Input: 
-% Output:
-
 % USAGE:
+% [out,outw]=compMRS_DPproc(DPid);
+%
+% DESCRIPTION:  
+% 
+% 
+% INPUTS:
+% DPid:     Data Packet ID (i.e. DP01, DP02, etc.)
+% opt:      Optional parameters:
+%
+% 
+% OUTPUTS:
+% out:      m x n cell array where m is the number of subjects in the DP,
+%           and n is the number of sessions in the DP.  Each element of the
+%           cell array is a water suppressed FID-A data struct. 
+% outw:     m x n cell array where m is the number of subjects in the DP,
+%           and n is the number of sessions in the DP.  Each element of the
+%           cell array is a water unsuppressed FID-A data struct.
+%
+% Both outputs are spectrally processed. out{m, n} contains the linewidth and SNR.
 
-% Add the 'code' folder to path then run this code from the data folder.
 
-% [out,outw]=compMRS_DPproc.m
+function [out, outw] = compMRS_DPproc(DPid, opt)
+disp(['Processing ' num2str(DPid)])
 
+if ~exist('opt','var')
+    % Default options for the processing
+    opt.doECCbeforeAvg = 1; % This is how it usually done with Bruker data
+    opt.predefCoilAmpl = 1; % Use the predefined coil scaling coefficients, when available
+    opt.rmBadAvg = 0;
+    opt.doBlockAveraging = 0;
+    opt.doDriftCorrection = 0;
+    opt.iterin = 20;
+    opt.tmaxin = 0.2;
+    opt.aaDomain = 'f';
+end
 
-function [out, outw] = compMRS_DPproc(DPid)
-
-
-mkdir('plots');
-
-% Options for the processing
-opt.doECCbeforeAvg = 1; % This is how it usually done with Bruker data
-opt.predefCoilAmpl = 1; % Use the predefined coil scaling coefficients, when available
-opt.rmBadAvg = 0;
 
 % try
+    
     [check]=compMRS_DPcheck(DPid);
     if check.allSame
+
+        % Create a folder to save the plots
+        if ~isfolder([pwd filesep 'plots'])
+               mkdir('plots')
+        end
+        
         [in, inw, inw_auto] = compMRS_DPload(DPid);
 
         %Loop through subjects and sessions.
         for m = 1:check.nSubj
             for n = 1:check.nSes(m)
-    
                 disp(['Processing ' DPid ' sub-' num2str(m) ' ses-' num2str(n)])
-    
+
                 % If separate water scan is available
                 if ~isempty(inw) && ~isempty(inw{m, n})
                     ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n) '_sepWater'];
                     [out{m, n}, outw{m, n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, ident, opt);
-                
+
                 % If automatic water scan is available
                 elseif ~isempty(inw_auto) && ~isempty(inw_auto{m, n})
                     ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n) '_autoWater'];
@@ -57,9 +79,16 @@ opt.rmBadAvg = 0;
 end
 
 function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
+    
+    ls = in_mn.pointsToLeftshift;
+    frac_ls = ls-floor(ls);
+    
+    out_mn = op_leftshift_keepSize(in_mn, floor(ls));
+    out_wmn= op_leftshift_keepSize(inw_mn, floor(ls));
+
     % do ECC before averaging (yes/no)
     if opt.doECCbeforeAvg
-        [out_mn, outw_mn]=op_eccKlose(in_mn,inw_mn);
+        [out_mn, outw_mn]=op_eccKlose(out_mn,out_wmn);
     end
 
     % Do coil combination WITHOUT averaging (if applicable)
@@ -97,32 +126,51 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
         end
     end
 
-    % do bad averages removal (yes/no) - not implemented yet
+    % Process the water
+    outw_mn=op_alignAverages(outw_mn,0.2,'n');
+    outw_mn=op_averaging(outw_mn);
+
+    % do bad averages removal, if applicable (code from Jamie)
     if opt.rmBadAvg
-        % op_rmbadaverages
+        outw_mn=subBadAveragesRemoval(outw_mn, opt);
     end
 
-    % Perform partial averaging
+    % Perform partial averaging, if applicable
+    if opt.doBlockAveraging
+        % Perform partial averaging
     
-    % Find the possible blocks sizes for partial averaging
-    av_block_sizes = divisors(out_mn.averages);
+        % Find the possible blocks sizes for partial averaging
+        av_block_sizes = divisors(out_mn.averages);
+        
+        % Some data are already partially averaged (Varian datasets)
+        av_eff_block_sizes = av_block_sizes*out_mn.rawAverages/out_mn.averages;
     
-    % Some data are already partially averaged (Varian datasets)
-    av_eff_block_sizes = av_block_sizes*out_mn.rawAverages/out_mn.averages;
+        % Remove effective block sizes bigger than 32 (does not really make
+        % sense to go higher than that)
+        av_block_sizes    =av_block_sizes(av_eff_block_sizes<=32);
+        av_eff_block_sizes=av_eff_block_sizes(av_eff_block_sizes<=32);
+    else
+        % Do not perform block averaging
+        av_block_sizes    = 1;
+        av_eff_block_sizes= out_mn.rawAverages/out_mn.averages;
+    end
+    
+    % Iterate along the list of block sizes, if applicable
 
-    % Remove block sizes bigger than 32 (does not really make sense to go higher
-    % than that)
-    av_block_sizes    =av_block_sizes(av_eff_block_sizes<=32);
-    av_eff_block_sizes=av_eff_block_sizes(av_eff_block_sizes<=32);
-    
-    % Iterate along the list of block sizes. The first element is without
-    % block averaging
     for kk=1:length(av_block_sizes)
         out_part_avg = op_blockAvg(out_mn,av_block_sizes(kk));
         
-        % do drift correction (if applicable)
-        [out_part_avg, fs]=op_freqAlignAverages(out_part_avg, 1, 'n');
+        % do drift correction (if applicable) (code from Jamie)
+
         
+        
+        if opt.doDriftCorrection
+            out_part_avg = subDriftCorrection(out_part_avg, ident, opt);
+        end
+
+
+
+
         % do averaging (if applicable)
         out_part_avg=op_averaging(out_part_avg);
         
@@ -131,8 +179,15 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
             [out_part_avg, ~]=op_eccKlose(out_part_avg, outw_mn);
         end
         
+            compensateFractionalGroupDelay=1;
+        if compensateFractionalGroupDelay
+            ph1 = -frac_ls*in_mn.dwelltime;
+            out_part_avg=op_addphase(out_part_avg,0,ph1,4.65,1);
+        end
+
         % Compute the quality metrics
         % Get LW (of NAA) and SNR
+        
         out_part_avg = op_autophase(out_part_avg, 1.7, 2.3);
         [FWHM_NAA] = op_getLW(out_part_avg, 1.8, 2.2, 8, 1);
         [SNR]=op_getSNR(out_part_avg,1.8,2.2,-2, 0, 1);
@@ -144,13 +199,18 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
         out_all{kk}=out_part_avg;
     end
 
-    % Search for the best output
+    % Search for the best output, if we performed block averaging
+    % (otherwise return trivial result)
     SNR_LW_ratios = zeros(length(out_all), 0);
     for kk=1:length(out_all)
         SNR_LW_ratios(kk) = out_all{kk}.SNR_LW_ratio;
     end
+    
     [~, index] = max(SNR_LW_ratios);
-    disp(['The best result is with block size ' num2str(av_eff_block_sizes(index)) '.'])
+
+    if opt.doBlockAveraging
+        disp(['The best result is with block size ' num2str(av_eff_block_sizes(index)) '.'])
+    end
 
     % Output the output with best SNR/LW
     out = out_all{index};
@@ -159,7 +219,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     % Plot and save the result to check
     plotlegend = {};
     for ii=1:length(out_all)
-        plotlegend{ii} = [num2str(out_all{ii}.block_size) ' blocks'];
+        plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
     end
     f=figure ('name', ident);
     hold on
@@ -176,4 +236,170 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     legend(plotlegend)
     saveas(f, ['plots/' ident], 'fig')
     print(f, ['plots/' ident], '-dpng', '-r600');
+
 end
+
+
+function output = subBadAveragesRemoval(input, ident, opt)
+    nBadAvgTotal=0;
+    nBadAverages=1;
+
+    sat='n';
+    output = input;
+    while sat=='n' || sat=='N'
+        nsd=4; %Setting the number of standard deviations;
+        iter=1;
+        nBadAverages=1;
+        nBadAvgTotal=0;
+        while nBadAverages>0
+            [output,metric{iter},badAverages]=op_rmbadaverages(output,nsd,'t');
+            nBadAverages=length(badAverages);
+            nBadAvgTotal=nBadAvgTotal+nBadAverages;
+            iter=iter+1;
+            disp([num2str(nBadAverages) ' bad averages removed on this iteration.']);
+            disp([num2str(nBadAvgTotal) ' bad averages removed in total.']);
+            close all;
+        end
+        %figure('position',[0 50 560 420]);
+        %Make figure to show pre-post removal of averages
+        h=figure('visible','off');
+        subplot(1,2,1);
+        plot(input.ppm,real(input.specs(:,:)));xlim([1 5]);
+        set(gca,'FontSize',8);
+        set(gca,'XDir','reverse');
+        xlabel('Frequency (ppm)','FontSize',10);
+        ylabel('Amplitude(a.u.)','FontSize',10);
+        title('Before','FontSize',12);
+        subplot(1,2,2);
+        plot(output.ppm,real(output.specs(:,:)));xlim([1 5]);
+        set(gca,'FontSize',8);
+        set(gca,'XDir','reverse');
+        xlabel('Frequency (ppm)','FontSize',10);
+        ylabel('Amplitude(a.u.)','FontSize',10);
+        title('After','FontSize',12);
+        set(h,'PaperUnits','centimeters');
+        set(h,'PaperPosition',[0 0 20 15]);
+        saveas(h,['plots' filesep ident '_rmBadAvg_prePostFig'],'jpg');
+        saveas(h,['plots' filesep ident '_rmBadAvg_prePostFig'],'fig');
+        close(h);
+        
+        %figure('position',[0 550 560 420]);
+        h=figure('visible','off');
+        plot([1:length(metric{1})],metric{1},'.r',[1:length(metric{iter-1})],metric{iter-1},'x','MarkerSize',16);
+        set(gca,'FontSize',8);
+        xlabel('Scan Number','FontSize',10);
+        ylabel('Deviation Metric','FontSize',10);
+        legend('Before rmBadAv','After rmBadAv');
+        legend boxoff;
+        title('Deviation Metric','FontSize',12);
+        set(h,'PaperUnits','centimeters');
+        set(h,'PaperPosition',[0 0 20 10]);
+        saveas(h,['plots' filesep ident '_rmBadAvg_scatterFig'],'png');
+        saveas(h,['plots' filesep ident '_rmBadAvg_scatterFig'],'fig');
+        close(h);
+        
+        %sat1=input('are you satisfied with the removal of bad averages? ','s');
+        sat='y';
+    end
+end
+
+
+function output = subDriftCorrection(input, ident, opt);
+    sat='n';
+    out_rm2=input;
+    while sat=='n' || sat=='N'
+        fsPoly=100;
+        phsPoly=1000;
+        fscum=zeros(out_rm2.sz(out_rm2.dims.averages),1);
+        phscum=zeros(out_rm2.sz(out_rm2.dims.averages),1);
+        iter=1;
+        while (abs(fsPoly(1))>0.001 || abs(phsPoly(1))>0.01) && iter<opt.iterin
+            iter=iter+1;
+            close all
+            tmax=0.05+0.01*randn(1);
+            ppmmin=1.6+0.1*randn(1);
+            ppmmaxarray=[3.5+0.1*randn(1,2),4+0.1*randn(1,3),5.5+0.1*randn(1,1)];
+            ppmmax=ppmmaxarray(randi(6,1));
+            switch opt.aaDomain
+                case 't'
+                    [out_aa,fs,phs]=op_alignAverages(out_rm2,opt.tmaxin);
+                case 'f'
+                    [out_aa,fs,phs]=op_alignAverages_fd(out_rm2,ppmmin,ppmmax,tmax,'y');
+                otherwise
+                    error('ERROR: avgAlignDomain not recognized!');
+            end
+            
+            fsPoly=polyfit([1:out_aa.sz(out_aa.dims.averages)]',fs,1);
+            phsPoly=polyfit([1:out_aa.sz(out_aa.dims.averages)]',phs,1);
+            %iter
+            
+            fscum=fscum+fs;
+            phscum=phscum+phs;
+            
+            output=out_aa;
+        end
+        h=figure('visible','off');
+        subplot(1,2,1);
+        plot(input.ppm,real(input.specs(:,:)));xlim([1 5]);
+        set(gca,'FontSize',8);
+        set(gca,'XDir','reverse');
+        xlabel('Frequency (ppm)','FontSize',10);
+        ylabel('Amplitude(a.u.)','FontSize',10);
+        title('Before','FontSize',12);
+        subplot(1,2,2);
+        plot(out_aa.ppm,real(out_aa.specs(:,:)));xlim([1 5]);
+        set(gca,'FontSize',8);
+        set(gca,'XDir','reverse');
+        xlabel('Frequency (ppm)','FontSize',10);
+        ylabel('Amplitude(a.u.)','FontSize',10);
+        title('After','FontSize',12);
+        set(h,'PaperUnits','centimeters');
+        set(h,'PaperPosition',[0 0 20 15]);
+        saveas(h,['plots' filesep ident 'alignAvgs_prePostFig'],'jpg');
+        saveas(h,['plots' filesep ident 'alignAvgs_prePostFig'],'fig');
+        close(h);
+        
+        h=figure('visible','off');
+        plot([1:out_aa.sz(out_aa.dims.averages)],fscum,'.-','LineWidth',2);
+        set(gca,'FontSize',8);
+        xlabel('Scan Number','FontSize',10);
+        ylabel('Frequency Drift [Hz]','FontSize',10);
+        legend('Frequency Drift','Location','SouthEast');
+        legend boxoff;
+        title('Estimated Freqeuncy Drift','FontSize',12);
+        set(h,'PaperUnits','centimeters');
+        set(h,'PaperPosition',[0 0 10 10]);
+        saveas(h,['plots' filesep ident  '_freqDriftFig'],'jpg');
+        saveas(h,['plots' filesep ident  '_freqDriftFig'],'fig');
+        close(h);
+        
+        h=figure('visible','off');
+        plot([1:out_aa.sz(out_aa.dims.averages)],phscum,'.-','LineWidth',2);
+        set(gca,'FontSize',8);
+        xlabel('Scan Number','FontSize',10);
+        ylabel('Phase Drift [Deg.]','FontSize',10);
+        legend('Phase Drift','Location','SouthEast');
+        legend boxoff;
+        title('Estimated Phase Drift','FontSize',12);
+        set(h,'PaperUnits','centimeters');
+        set(h,'PaperPosition',[0 0 10 10]);
+        saveas(h,['plots' filesep ident '_phaseDriftFig'],'jpg');
+        saveas(h,['plots' filesep ident '_phaseDriftFig'],'fig');
+        close(h);
+
+        sat='y';
+        % if sat=='n'
+        %     iter=0;
+        %     p1=100;
+        %     fscum=zeros(out_rm.sz(2:end));
+        %     phscum=zeros(out_rm.sz(2:end));
+        %     fs2cum=zeros(out_cc.sz(2:end));
+        %     phs2cum=zeros(out_cc.sz(2:end));
+        %     out_rm2=out_rm;
+        %     out_cc2=out_cc;
+        % end
+        totalFreqDrift=mean(max(fscum)-min(fscum));
+        totalPhaseDrift=mean(max(phscum)-min(phscum));
+    end
+end
+
