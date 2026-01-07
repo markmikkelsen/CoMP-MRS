@@ -4,7 +4,7 @@
 %Wendy Oakden, Sunnybrook Research Institute, 2020
 %Jamie Near, Sunnybrook Research Institute, 2023
 %Georg Oeltzschner, Johns Hopkins University 2025
-%Thanh Phong Le, EPFL, 2025
+%Thanh Phong Lê, EPFL, 2025
 %Diana Rotaru, Medical University of Vienna, 2025
 %
 % USAGE:
@@ -73,6 +73,12 @@ end
 % Populate the header information from the ACQP file
 acqpFile        = fullfile(inDir, 'acqp');
 headerACQP      = compMRS_parseBrukerFormat(acqpFile);
+
+% Populate the header information from the ACQUS file
+acqusFile       = fullfile(inDir, 'acqus');
+if isfile(acqusFile)
+    headerACQUS = compMRS_parseBrukerFormat(acqusFile);
+end
 
 % Populate the header information from the Method file
 methodFile      = fullfile(inDir, 'method');
@@ -168,22 +174,25 @@ else
 end
 
 % Group delay (i.e. left shift)
-if contains(version, ["PV 5", "PV 6", "PV 7", "PV-7"])
-    leftshift       = round(headerACQP.GRPDLY);
-elseif contains(version,'PV-360')
-    % I'm not sure this differentiation is necessary but Jessie is getting
-    % GRPDELY from the ACQUS file - might remove if not needed
-    if exist('headerACQUS', 'var')
-        leftshift       = round(headerACQUS.GRPDLY);
+leftshift=-1;
+if isfield(headerACQP,'GRPDLY')
+    leftshift = headerACQP.GRPDLY;
+end
+
+if leftshift==-1 && exist('headerACQUS', 'var')
+    leftshift       = headerACQUS.GRPDLY;
+end
+
+if leftshift==-1 && isfield(headerACQP, 'ACQ_RxFilterInfo')
+    if ~iscell(headerACQP.ACQ_RxFilterInfo{1})
+        leftshift = str2double(headerACQP.ACQ_RxFilterInfo{1});
     else
-        leftshift       = round(headerACQP.GRPDLY);
+        leftshift = str2double(headerACQP.ACQ_RxFilterInfo{1}{1});
     end
-    
-    % Found a couple instances of GRPDLY being -1, in that case, set it to
-    % the PV360 default which is 77 (from Brayan Alves' script)
-    if leftshift == -1
-        leftshift = 77;
-    end
+end
+
+if leftshift==-1
+    disp('NO GROUP DELAY FOUND')
 end
 
 % Spectral width
@@ -419,13 +428,13 @@ else
     error('ERROR:  rawData variable not recognized.  Options are ''y'' or ''n''.');
 end
 
-
-%Perform left-shifting to remove points before the echo
-fids_trunc=fids_raw(leftshift+1:end,:,:,:);
-
-%replace the left-shifted points with zeros at the end
-fids=padarray(fids_trunc, [leftshift,0],'post');
-
+% Removed: we will perform leftshift in compMRS_DPproc - Thanh 20260101
+% %Perform left-shifting to remove points before the echo
+% fids_trunc=fids_raw(leftshift+1:end,:,:,:);
+% 
+% %replace the left-shifted points with zeros at the end
+% fids=padarray(fids_trunc, [leftshift,0],'post');
+fids=fids_raw;
 sz=size(fids); %size of the array
 
 %calculate the dwelltime:
@@ -471,12 +480,19 @@ else
 end
 
 if strcmpi(rawData,'y')
-    dims.averages=2;
+    
     if rawRepetitions>1
-        dims.subSpecs=4;
+        if rawAverages>1
+            dims.averages=2;
+            dims.subSpecs=4;
+        else
+            dims.averages=0;
+            dims.subSpecs=3;
+        end
     else
         dims.subSpecs=0;
     end
+
 elseif strcmpi(rawData,'n')
     dims.averages=0;
     if rawRepetitions>1
@@ -516,14 +532,16 @@ if rawData == 'y'
         % The data stored are already averaged.
         averages_ref=1;
         ref.flags.averaged=1;
-            
-        fids_ref=reshape(fids_ref,[], Nrcvrs);
-        fids_ref_trunc=fids_ref(leftshift+1:end,:,:);
-        reffids=padarray(fids_ref_trunc, [leftshift,0],'post');
-    
+
+        reffids=reshape(fids_ref,[], Nrcvrs);
+
+        % Removed: we will perform leftshift in compMRS_DPproc - Thanh 20260101
+        % fids_ref_trunc=fids_ref(leftshift+1:end,:,:);
+        % reffids=padarray(fids_ref_trunc, [leftshift,0],'post');
+
         % Apply ref freq shift (the difference between txfrq and txfrq_ref)
         % (but not if it's PV360)
-        sz_ref=size(fids_ref); %size of the array
+        sz_ref=size(reffids); %size of the array
         if ~contains(version, ["PV-360"])
             tmat=repmat(t',[1 sz_ref(2:end)]);
             reffids=reffids.*exp(-1i*tmat*(txfrq_ref-txfrq)*2*pi);
@@ -585,13 +603,14 @@ if ~isRef || rawData == 'n'
         	rawAverages_ref=1;
        	end
     
-        fids_ref=reshape(fids_ref,[],averages_ref);
-        fids_ref_trunc=fids_ref(leftshift+1:end,:);
-        reffids=padarray(fids_ref_trunc, [leftshift,0],'post');
-    
+        reffids=reshape(fids_ref,[],averages_ref);
+        % Removed: we will perform leftshift in compMRS_DPproc - Thanh 20260101
+        % fids_ref_trunc=fids_ref(leftshift+1:end,:);
+        % reffids=padarray(fids_ref_trunc, [leftshift,0],'post');
+        % 
         % Apply ref freq shift (the difference between txfrq and txfrq_ref)
         % (but not if it's PV360)
-        sz_ref=size(fids_ref); %size of the array
+        sz_ref=size(reffids); %size of the array
         if ~contains(version, ["PV-360"])
             tmat=repmat(t',[1 sz_ref(2:end)]);
             reffids=reffids.*exp(-1i*tmat*(txfrq_ref-txfrq)*2*pi);
@@ -670,9 +689,10 @@ if isNav
     averages_nav=rawAverages_nav;
     
     if contains(version,'PV 5')
-        fids_nav=reshape(fids_nav,[],rawAverages_nav);
-        fids_nav_trunc=fids_nav(leftshift+1:end,:);
-        navfids=padarray(fids_nav_trunc, [leftshift,0],'post');
+        navfids=reshape(fids_nav,[],rawAverages_nav);
+        % Removed: we will perform leftshift in compMRS_DPproc - Thanh 20260101
+        % fids_nav_trunc=fids_nav(leftshift+1:end,:);
+        % navfids=padarray(fids_nav_trunc, [leftshift,0],'post');
     else
         navfids=reshape(fids_nav,headerMethod.PVM_NavPoints,Nrcvrs, rawAverages, rawRepetitions);
         %Permute so that time is along 1st dimension, averages is along 2nd 
@@ -756,7 +776,7 @@ out.rawSubspecs=rawSubspecs;
 out.seq=sequence;
 out.te=te;
 out.tr=tr;
-out.pointsToLeftshift=0;
+out.pointsToLeftshift=leftshift;
 out.version=version;
 out.filepath=fileRaw;
 
@@ -764,7 +784,7 @@ out.filepath=fileRaw;
 %FILLING IN THE FLAGS FOR THE RAW DATA
 out.flags.writtentostruct=1;
 out.flags.gotparams=1;
-out.flags.leftshifted=1;
+out.flags.leftshifted=0;
 out.flags.filtered=0;
 out.flags.zeropadded=0;
 out.flags.freqcorrected=0;
@@ -808,7 +828,7 @@ if isRef
     ref.seq=sequence;
     ref.te=te;
     ref.tr=tr;
-    ref.pointsToLeftshift=0;
+    ref.pointsToLeftshift=leftshift;
     ref.version=version;
     % DGR added file path to FID-A structure; 
     % when no separate water scan is acquired (a reference scan)
@@ -823,7 +843,7 @@ if isRef
     %FILLING IN THE FLAGS FOR THE REF DATA
     ref.flags.writtentostruct=1;
     ref.flags.gotparams=1;
-    ref.flags.leftshifted=1;
+    ref.flags.leftshifted=0;
     ref.flags.filtered=0;
     ref.flags.zeropadded=0;
     ref.flags.freqcorrected=0;
@@ -869,13 +889,13 @@ if isNav
     nav.seq=sequence;
     nav.te=te;
     nav.tr=tr;
-    nav.pointsToLeftshift=0;
+    nav.pointsToLeftshift=leftshift;
     nav.version=version;
     
     %FILLING IN THE FLAGS FOR THE NAV DATA
     nav.flags.writtentostruct=1;
     nav.flags.gotparams=1;
-    nav.flags.leftshifted=1;
+    nav.flags.leftshifted=0;
     nav.flags.filtered=0;
     nav.flags.zeropadded=0;
     nav.flags.freqcorrected=0;
