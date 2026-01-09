@@ -353,7 +353,11 @@ if strcmpi(rawData,'y')
         fids_raw=reshape(fids_raw,rawDataPoints,Nrcvrs,rawAverages,rawRepetitions);
         %Permute so that time is along 1st dimension, averages is along 2nd 
         %dimension, and coils is along 3rd dimension:
-        fids_raw=permute(fids_raw,[1,3,2,4]); 
+        fids_raw=permute(fids_raw,[1,3,2,4]);
+
+    elseif ~contains(version,'PV 5') && ~multiRcvrs
+        % Found a dataset with only one receiver and one repetition
+        fids_raw=reshape(fids_raw,rawDataPoints,rawAverages,rawRepetitions);
 
     elseif contains(version,'PV 5') % && multiRcvrs
         % PV 5 does not appear to store individual coil channels in the
@@ -362,9 +366,7 @@ if strcmpi(rawData,'y')
         % Reshape into a Npts x Naverages x Nrepetitions array
         fids_raw=reshape(fids_raw,rawDataPoints,rawAverages,rawRepetitions);
 
-    % elseif ~contains(version,'PV 5') && ~multiRcvrs
-    %     % Found a dataset with only one receiver and one repetition
-    %     fids_raw=reshape(fids_raw,rawDataPoints,rawAverages,rawRepetitions);
+    
 
     end
 
