@@ -31,8 +31,8 @@ disp(['Processing ' num2str(DPid)])
 
 if ~exist('opt','var')
     % Default options for the processing
-    opt.doECCbeforeAvg = 1; % This is how it usually done with Bruker data
-    opt.predefCoilAmpl = 1; % Use the predefined coil scaling coefficients, when available
+    opt.doECCbeforeAvg = 0; % 1 is how it usually done with Bruker data
+    opt.predefCoilAmpl = 0; % Use the predefined coil scaling coefficients, when available
     opt.rmBadAvg = 0;
     opt.doBlockAveraging = 0;
     opt.doDriftCorrection = 0;
@@ -63,9 +63,9 @@ end
                 if ~isempty(inw) && ~isempty(inw{m, n})
                     ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n) '_sepWater'];
                     [out{m, n}, outw{m, n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, ident, opt);
-
+                end
                 % If automatic water scan is available
-                elseif ~isempty(inw_auto) && ~isempty(inw_auto{m, n})
+                if ~isempty(inw_auto) && ~isempty(inw_auto{m, n})
                     ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n) '_autoWater'];
                     [out{m, n}, outw{m, n}] = compMRS_DPproc_sub(in{m, n}, inw_auto{m, n}, ident, opt);
                 end
@@ -84,11 +84,13 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     frac_ls = ls-floor(ls);
     
     out_mn = op_leftshift_keepSize(in_mn, floor(ls));
-    out_wmn= op_leftshift_keepSize(inw_mn, floor(ls));
+    outw_mn= op_leftshift_keepSize(inw_mn, floor(ls));
+
+    % Here check whether subspectra have to be combined first.
 
     % do ECC before averaging (yes/no)
     if opt.doECCbeforeAvg
-        [out_mn, outw_mn]=op_eccKlose(out_mn,out_wmn);
+        [out_mn, outw_mn]=op_eccKlose(out_mn,outw_mn);
     end
 
     % Do coil combination WITHOUT averaging (if applicable)
@@ -122,7 +124,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
         if contains(in_mn.version, ["PV 360", "PV-360"])
             % divide by number of channels to achieve averaging
             out_mn = op_ampScale(out_mn, 1.0/length(coilcombos_to_apply.ph));
-            outw_mn = op_ampScale(ref_proc, 1.0/length(coilcombos_to_apply.ph));
+            outw_mn = op_ampScale(outw_mn, 1.0/length(coilcombos_to_apply.ph));
         end
     end
 
@@ -168,9 +170,6 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
             out_part_avg = subDriftCorrection(out_part_avg, ident, opt);
         end
 
-
-
-
         % do averaging (if applicable)
         out_part_avg=op_averaging(out_part_avg);
         
@@ -179,10 +178,10 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
             [out_part_avg, ~]=op_eccKlose(out_part_avg, outw_mn);
         end
         
-            compensateFractionalGroupDelay=1;
+        compensateFractionalGroupDelay=1;
         if compensateFractionalGroupDelay
             ph1 = -frac_ls*in_mn.dwelltime;
-            out_part_avg=op_addphase(out_part_avg,0,ph1,4.65,1);
+            out_part_avg=op_addphase(out_part_avg,0,ph1,4.7,1);
         end
 
         % Compute the quality metrics

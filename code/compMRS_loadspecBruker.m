@@ -211,7 +211,7 @@ elseif contains(version, ["PV 6", "PV 7", "PV-7", "PV-360"])
     txfrq       = headerMethod.PVM_FrqWork(1)*1e6;
     txfrq_ref   = headerMethod.PVM_FrqRef(1)*1e6;
 end
-Bo=txfrq/42577000;
+Bo=txfrq_ref/42577000;
 
 % spectralwidthppm is stored in the header BUT it is slightly different 
 % than if we calculate it from txfrq and spectralwidth - this suggests we 
@@ -222,15 +222,14 @@ Bo=txfrq/42577000;
 spectralwidthppm=spectralwidth/(txfrq_ref/1e6); % old method
 spectralwidthppm=headerMethod.PVM_SpecSW; % better method?
 
-% Center frequency is *explicitly* stored in the headers from PV6 onwards -
-% mostly it's been 4.7 so we'll assume that for PV5 too. 
+% Center frequency is *explicitly* stored in the headers from PV6 onwards
 % For compatibility with the other FID-A functions, we should probably
 % store centerfreq in the FID-A header?
-if contains(version, ["PV 5", "PV 6", "PV 7", "PV-7"])
-    centerfreq      = 4.7;
+if contains(version, ["PV 5"])
+    centerfreq      = 4.7 + headerMethod.PVM_SpecOffsetppm;
     centerfreq_ref  = centerfreq;
-elseif contains(version,'PV-360')
-    centerfreq      = headerMethod.PVM_FrqRefPpm(1);
+elseif contains(version,["PV 6", "PV 7", "PV-7" "PV-360"])
+    centerfreq      = 4.7; %headerMethod.PVM_FrqWorkPpm(1);
 end
 
 % Receiver gain which we seem to need when reconciling raw and processed data
@@ -356,18 +355,21 @@ if strcmpi(rawData,'y')
         %dimension, and coils is along 3rd dimension:
         fids_raw=permute(fids_raw,[1,3,2,4]); 
 
-    elseif contains(version,'PV 5') && multiRcvrs
+    elseif contains(version,'PV 5') % && multiRcvrs
         % PV 5 does not appear to store individual coil channels in the
         % job0 file, but still preserves individual transients
 
         % Reshape into a Npts x Naverages x Nrepetitions array
         fids_raw=reshape(fids_raw,rawDataPoints,rawAverages,rawRepetitions);
 
-    elseif ~contains(version,'PV 5') && ~multiRcvrs
-        % Found a dataset with only one receiver and one repetition
-        fids_raw=reshape(fids_raw,rawDataPoints,rawAverages,rawRepetitions);
+    % elseif ~contains(version,'PV 5') && ~multiRcvrs
+    %     % Found a dataset with only one receiver and one repetition
+    %     fids_raw=reshape(fids_raw,rawDataPoints,rawAverages,rawRepetitions);
 
     end
+
+
+
 
     % Remove singletons
     fids_raw = squeeze(fids_raw);
@@ -449,7 +451,7 @@ f=[fmax:-2*fmax/(rawDataPoints-1):-fmax];
 ppm=f/(txfrq/1e6)+centerfreq;
 
 % Apply ref freq shift (the difference between txfrq and txfrq_ref)
-if contains(version, ["PV-360"]) || (contains(version, ["PV 6.0.1", "PV-7"]) && strcmpi(rawData,'y'))
+if contains(version, ["PV-360"]) || (contains(version, ["PV 6", "PV-7"]) && strcmpi(rawData,'y'))
     tmat=repmat(t',[1 sz(2:end)]);
     fids=fids.*exp(-1i*tmat*(txfrq_ref-txfrq)*2*pi);
 end
@@ -480,13 +482,15 @@ else
 end
 
 if strcmpi(rawData,'y')
-    
+    if rawAverages>1
+        dims.averages=2;
+    else
+        dims.averages=0;
+    end
     if rawRepetitions>1
         if rawAverages>1
-            dims.averages=2;
             dims.subSpecs=4;
         else
-            dims.averages=0;
             dims.subSpecs=3;
         end
     else
@@ -506,6 +510,7 @@ end
 %the Repetitions dimensions (since it is the outer loop per Bruker manual)
 subspecs=rawRepetitions;
 rawSubspecs=rawRepetitions;
+
 
 
 %% NOW TRY LOADING IN THE RAW REFERENCE SCAN DATA (IF IT EXISTS)
@@ -732,12 +737,12 @@ if isNav
     %Do the fourier transform
     specs_nav=fftshift(ifft(navfids,[],1),1);
 
-%     % Apply ref freq shift (the difference between txfrq and txfrq_ref)
-%     % (but not if it's PV360)
-%     if ~contains(version, ["PV-360"])
-%         tmat=repmat(t',[1 sz(2:end)]);
-%         navfids=navfids.*exp(-1i*tmat*(txfrq_ref-txfrq)*2*pi);
-%     end
+    % Apply ref freq shift (the difference between txfrq and txfrq_ref)
+    % (but not if it's PV360)
+    % if ~contains(version, ["PV-360"])
+    %     tmat=repmat(t',[1 sz(2:end)]);
+    %     navfids=navfids.*exp(-1i*tmat*(txfrq_ref-txfrq)*2*pi);
+    % end
 
     nav.flags.averaged=0;
     %specify the dims
