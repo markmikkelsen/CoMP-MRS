@@ -23,7 +23,7 @@
 %           n is the number of sessions in the DP{k}
 %           Each element {k}{m, n} is a water unsuppressed FID-A data struct.
  
-function [out,outw]=compMRS_DPproc_allDPs()
+function [out, outw, out_auto, outw_auto]=compMRS_DPproc_allDPs()
 
     % Look for all DPs in the current folder
     res = dir('DP*');
@@ -31,6 +31,6 @@ function [out,outw]=compMRS_DPproc_allDPs()
     % run compMRS_DPproc on all DPs
     
     for ii=1:length(res)
-        [out{ii},outw{ii}]=compMRS_DPproc(res(ii).name);
+        [out{ii}, outw{ii}, out_auto{ii}, outw_auto{ii}]=compMRS_DPproc(res(ii).name);
     end
 end

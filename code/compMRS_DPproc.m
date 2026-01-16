@@ -26,19 +26,21 @@
 % Both outputs are spectrally processed. out{m, n} contains the linewidth and SNR.
 
 
-function [out, outw] = compMRS_DPproc(DPid, opt)
+function [out, outw, out_auto, outw_auto] = compMRS_DPproc(DPid, opt)
 disp(['Processing ' num2str(DPid)])
 
 if ~exist('opt','var')
     % Default options for the processing
-    opt.doECCbeforeAvg = 0; % 1 is how it usually done with Bruker data
-    opt.predefCoilAmpl = 0; % Use the predefined coil scaling coefficients, when available
-    opt.rmBadAvg = 0;
-    opt.doBlockAveraging = 0;
-    opt.doDriftCorrection = 0;
-    opt.iterin = 20;
-    opt.tmaxin = 0.2;
-    opt.aaDomain = 'f';
+    opt.doECCbeforeAvg      = 0; % 1 is how it usually done with Bruker data
+    opt.predefCoilAmpl      = 0; % Use the predefined coil scaling coefficients, when available
+    opt.rmBadAvg            = 1;
+    opt.doBlockAveraging    = 0;
+    opt.doDriftCorrection   = 1;
+    opt.iterin              = 20;
+    opt.tmaxin              = 0.2;
+    opt.aaDomain            = 'f';
+    opt.autophase           = 1;
+    opt.compFracGroupDelay=1;
 end
 
 
@@ -53,21 +55,27 @@ end
         end
         
         [in, inw, inw_auto] = compMRS_DPload(DPid);
+        autoWaterExists=~isempty(inw_auto);
 
         %Loop through subjects and sessions.
+
+        out         = cell(check.nSubj);
+        outw        = cell(check.nSubj);
+        out_auto    = cell(check.nSubj);
+        outw_auto   = cell(check.nSubj);
+
         for m = 1:check.nSubj
             for n = 1:check.nSes(m)
                 disp(['Processing ' DPid ' sub-' num2str(m) ' ses-' num2str(n)])
-
+                ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n)];
                 % If separate water scan is available
                 if ~isempty(inw) && ~isempty(inw{m, n})
-                    ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n) '_sepWater'];
-                    [out{m, n}, outw{m, n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, ident, opt);
+                    
+                    [out{m}{n}, outw{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, [ident  '_sepWater'], opt);
                 end
                 % If automatic water scan is available
-                if ~isempty(inw_auto) && ~isempty(inw_auto{m, n})
-                    ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n) '_autoWater'];
-                    [out{m, n}, outw{m, n}] = compMRS_DPproc_sub(in{m, n}, inw_auto{m, n}, ident, opt);
+                if autoWaterExists && ~isempty(inw_auto{m, n})
+                    [out_auto{m}{n}, outw_auto{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw_auto{m, n}, [ident  '_autoWater'], opt);
                 end
             end
         end
@@ -86,11 +94,12 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     out_mn = op_leftshift_keepSize(in_mn, floor(ls));
     outw_mn= op_leftshift_keepSize(inw_mn, floor(ls));
 
-    % Here check whether subspectra have to be combined first.
+    % Average the water
+    outw_mn=op_averaging(outw_mn);
 
     % do ECC before averaging (yes/no)
     if opt.doECCbeforeAvg
-        [out_mn, outw_mn]=op_eccKlose(out_mn,outw_mn);
+        [out_mn, outw_mn]=op_eccKlose(out_mn, outw_mn);
     end
 
     % Do coil combination WITHOUT averaging (if applicable)
@@ -99,7 +108,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
         % The code below is mostly from op_combineRcvrs
         
         %first find the weights using the water unsuppressed data:
-        coilcombos_to_apply=op_getcoilcombos(outw_mn,2,'h');
+        coilcombos_to_apply=op_getcoilcombos(outw_mn, 2,'h');
 
         % If we choose to use the predefined weights then set the weights read from the method file (when available)
         if opt.predefCoilAmpl && isfield(out_mn, 'coilcombos')
@@ -128,13 +137,17 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
         end
     end
 
-    % Process the water
-    outw_mn=op_alignAverages(outw_mn,0.2,'n');
-    outw_mn=op_averaging(outw_mn);
+    
+
+    % Combine subspectra for SPECIAL
+    
+    if strcmp(out_mn.seq, 'SPECIAL') && out_mn.dims.subSpecs>0
+        out_mn=op_combinesubspecs(out_mn,"diff");
+    end
 
     % do bad averages removal, if applicable (code from Jamie)
     if opt.rmBadAvg
-        outw_mn=subBadAveragesRemoval(outw_mn, opt);
+        out_mn=subBadAveragesRemoval(out_mn, ident, opt);
     end
 
     % Perform partial averaging, if applicable
@@ -178,16 +191,17 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
             [out_part_avg, ~]=op_eccKlose(out_part_avg, outw_mn);
         end
         
-        compensateFractionalGroupDelay=1;
-        if compensateFractionalGroupDelay
+        
+        if opt.compFracGroupDelay && abs(frac_ls)>0.00001
             ph1 = -frac_ls*in_mn.dwelltime;
-            out_part_avg=op_addphase(out_part_avg,0,ph1,4.7,1);
+            out_part_avg=op_addphase(out_part_avg, 0, ph1, out_part_avg.centerfreq, 1);
         end
-
         % Compute the quality metrics
         % Get LW (of NAA) and SNR
         
-        out_part_avg = op_autophase(out_part_avg, 1.7, 2.3);
+        if opt.autophase
+            out_part_avg = op_autophase(out_part_avg, 2.8, 3.2);
+        end
         [FWHM_NAA] = op_getLW(out_part_avg, 1.8, 2.2, 8, 1);
         [SNR]=op_getSNR(out_part_avg,1.8,2.2,-2, 0, 1);
         
@@ -220,6 +234,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     for ii=1:length(out_all)
         plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
     end
+    
     f=figure ('name', ident);
     hold on
     box on
@@ -234,7 +249,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     end
     legend(plotlegend)
     saveas(f, ['plots/' ident], 'fig')
-    print(f, ['plots/' ident], '-dpng', '-r600');
+    print(f, ['plots/' ident], '-dpng', '-r300');
 
 end
 
