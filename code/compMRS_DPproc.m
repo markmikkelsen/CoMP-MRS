@@ -71,11 +71,11 @@ end
                 % If separate water scan is available
                 if ~isempty(inw) && ~isempty(inw{m, n})
                     
-                    [out{m}{n}, outw{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, [ident  '_sepWater'], opt);
+                    [out{m}{n}, outw{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, [ident  '_sepWater'], check, opt);
                 end
                 % If automatic water scan is available
                 if autoWaterExists && ~isempty(inw_auto{m, n})
-                    [out_auto{m}{n}, outw_auto{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw_auto{m, n}, [ident  '_autoWater'], opt);
+                    [out_auto{m}{n}, outw_auto{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw_auto{m, n}, [ident  '_autoWater'], check, opt);
                 end
             end
         end
@@ -86,7 +86,7 @@ end
 
 end
 
-function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
+function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     ls = in_mn.pointsToLeftshift;
     frac_ls = ls-floor(ls);
 
@@ -106,12 +106,14 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, opt)
     % Average the water
     outw_mn=op_averaging(outw_mn);
 
-    % On some DPs, the reference/working frequency is different
-    % between the metabolite and reference scan. We try to shift the water scan
-    % such that it matches the metabolite scan.
-    diff_freq = out_mn.txfrq - outw_mn.txfrq;
-    if abs(diff_freq) > 20 % Hz
-        outw_mn=op_freqshift(outw_mn,diff_freq);
+    % On some Varian DPs/subjects, the the reference/working frequency is different
+    % between the metabolite and reference scan and it does not seem to be intentional.
+    % We try to shift the water scan such that it matches the metabolite scan.
+    if strcmp(check.vendor(1),'VARIAN')
+        diff_freq = out_mn.txfrq - outw_mn.txfrq;
+        if abs(diff_freq) > 20 % Hz
+            outw_mn=op_freqshift(outw_mn,diff_freq);
+        end
     end
 
     % do ECC before averaging (yes/no)
