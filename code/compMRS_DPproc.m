@@ -109,7 +109,8 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     % On some Varian DPs/subjects, the the reference/working frequency is different
     % between the metabolite and reference scan and it does not seem to be intentional.
     % We try to shift the water scan such that it matches the metabolite scan.
-    if strcmp(check.vendor(1),'VARIAN')
+    % This correction is only performed on DP32
+    if strcmp(check.vendor(1),'VARIAN') && contains(ident, 'DP32')
         diff_freq = out_mn.txfrq - outw_mn.txfrq;
         if abs(diff_freq) > 20 % Hz
             outw_mn=op_freqshift(outw_mn,diff_freq);
