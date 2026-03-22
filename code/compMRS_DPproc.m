@@ -44,14 +44,14 @@ if ~exist('opt','var')
 end
 
 
-% try
+ try
     
     [check]=compMRS_DPcheck(DPid);
     if check.allSame
 
         % Create a folder to save the plots
-        if ~isfolder([pwd filesep 'plots'])
-               mkdir('plots')
+        if ~isfolder([pwd filesep 'plots' filesep DPid])
+               mkdir(['plots' filesep DPid])
         end
         
         [in, inw, inw_auto] = compMRS_DPload(DPid);
@@ -59,15 +59,18 @@ end
 
         %Loop through subjects and sessions.
 
-        out         = cell(check.nSubj);
-        outw        = cell(check.nSubj);
-        out_auto    = cell(check.nSubj);
-        outw_auto   = cell(check.nSubj);
+        out         = cell(check.nSubj,1);
+        outw        = cell(check.nSubj,1);
+        out_auto    = cell(check.nSubj,1);
+        outw_auto   = cell(check.nSubj,1);
 
         for m = 1:check.nSubj
             for n = 1:check.nSes(m)
                 disp(['Processing ' DPid ' sub-' num2str(m) ' ses-' num2str(n)])
-                ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n)];
+                nsubj = string(extractBetween(in{m,n}.filepath,[filesep 'sub-0'],[filesep 'ses-']));
+                ident = ([DPid '_sub-' nsubj '_ses-' num2str(n)]);
+                ident = char(join(ident,""));
+                %ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n)];
                 % If separate water scan is available
                 if ~isempty(inw) && ~isempty(inw{m, n})
                     
@@ -80,10 +83,10 @@ end
             end
         end
     end
-% catch
-%     disp([DPid ' error'])
-% end
-
+catch
+    disp([DPid ' error'])
+end
+save(['plots/' DPid])
 end
 
 function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
@@ -195,8 +198,6 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         out_part_avg = op_blockAvg(out_mn,av_block_sizes(kk));
         
         % do drift correction (if applicable) (code from Jamie)
-
-        
         
         if opt.doDriftCorrection
             out_part_avg = subDriftCorrection(out_part_avg, ident, opt);
@@ -248,13 +249,13 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     end
 
     % Output the output with best SNR/LW
-    out = out_all{index};
+    out = out_all{kk};
     outw= outw_mn;
 
     % Plot and save the result to check
     plotlegend = {};
     for ii=1:length(out_all)
-        plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
+        %plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
     end
     
     f=figure ('name', ident);
@@ -267,11 +268,13 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     xlim([0 4.5])
 
     for ii=1:length(out_all)
-        plot(out_all{ii}.ppm, real(out_all{ii}.specs))
+        plot(out_all{ii}.ppm, real(out_all{ii}.specs), 'LineWidth', 3)
     end
     legend(plotlegend)
-    saveas(f, ['plots/' ident], 'fig')
-    print(f, ['plots/' ident], '-dpng', '-r300');
+    ax=gca; ax.FontSize=16;
+    saveas(f, ['plots' filesep ident(1:4) filesep ident], 'fig')
+    saveas(f, ['plots' filesep ident(1:4) filesep ident], 'png')
+    %print(f, ['plots' filesep plots filesep ident], '-dpng', '-r300');
 
 end
 
@@ -315,8 +318,8 @@ function output = subBadAveragesRemoval(input, ident, opt)
         title('After','FontSize',12);
         set(h,'PaperUnits','centimeters');
         set(h,'PaperPosition',[0 0 20 15]);
-        saveas(h,['plots' filesep ident '_rmBadAvg_prePostFig'],'jpg');
-        saveas(h,['plots' filesep ident '_rmBadAvg_prePostFig'],'fig');
+        % saveas(h,['plots' filesep ident '_rmBadAvg_prePostFig'],'jpg');
+        % saveas(h,['plots' filesep ident '_rmBadAvg_prePostFig'],'fig');
         close(h);
         
         %figure('position',[0 550 560 420]);
@@ -330,8 +333,8 @@ function output = subBadAveragesRemoval(input, ident, opt)
         title('Deviation Metric','FontSize',12);
         set(h,'PaperUnits','centimeters');
         set(h,'PaperPosition',[0 0 20 10]);
-        saveas(h,['plots' filesep ident '_rmBadAvg_scatterFig'],'png');
-        saveas(h,['plots' filesep ident '_rmBadAvg_scatterFig'],'fig');
+        % saveas(h,['plots' filesep ident '_rmBadAvg_scatterFig'],'png');
+        % saveas(h,['plots' filesep ident '_rmBadAvg_scatterFig'],'fig');
         close(h);
         
         %sat1=input('are you satisfied with the removal of bad averages? ','s');
@@ -391,8 +394,8 @@ function output = subDriftCorrection(input, ident, opt);
         title('After','FontSize',12);
         set(h,'PaperUnits','centimeters');
         set(h,'PaperPosition',[0 0 20 15]);
-        saveas(h,['plots' filesep ident 'alignAvgs_prePostFig'],'jpg');
-        saveas(h,['plots' filesep ident 'alignAvgs_prePostFig'],'fig');
+        % saveas(h,['plots' filesep ident 'alignAvgs_prePostFig'],'jpg');
+        % saveas(h,['plots' filesep ident 'alignAvgs_prePostFig'],'fig');
         close(h);
         
         h=figure('visible','off');
@@ -405,8 +408,8 @@ function output = subDriftCorrection(input, ident, opt);
         title('Estimated Freqeuncy Drift','FontSize',12);
         set(h,'PaperUnits','centimeters');
         set(h,'PaperPosition',[0 0 10 10]);
-        saveas(h,['plots' filesep ident  '_freqDriftFig'],'jpg');
-        saveas(h,['plots' filesep ident  '_freqDriftFig'],'fig');
+        % saveas(h,['plots' filesep ident  '_freqDriftFig'],'jpg');
+        % saveas(h,['plots' filesep ident  '_freqDriftFig'],'fig');
         close(h);
         
         h=figure('visible','off');
@@ -419,8 +422,8 @@ function output = subDriftCorrection(input, ident, opt);
         title('Estimated Phase Drift','FontSize',12);
         set(h,'PaperUnits','centimeters');
         set(h,'PaperPosition',[0 0 10 10]);
-        saveas(h,['plots' filesep ident '_phaseDriftFig'],'jpg');
-        saveas(h,['plots' filesep ident '_phaseDriftFig'],'fig');
+        % saveas(h,['plots' filesep ident '_phaseDriftFig'],'jpg');
+        % saveas(h,['plots' filesep ident '_phaseDriftFig'],'fig');
         close(h);
 
         sat='y';
