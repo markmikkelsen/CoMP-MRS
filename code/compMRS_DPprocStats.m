@@ -230,6 +230,14 @@ participantTable.MRSshimmethod = strrep(participantTable.MRSshimmethod, ...
     "FASTMAP/FASTESTMAP", "FASTMAP-FASTESTMAP");
 
 %% ------------------------------------------------------------------------
+% Standardize MRfield
+% Replace all values between 9 and 9.4 with 9.4
+%% ------------------------------------------------------------------------
+participantTable.MRfield = str2double(string(participantTable.MRfield));
+idxField = participantTable.MRfield >= 9 & participantTable.MRfield < 9.4;
+participantTable.MRfield(idxField) = 9.4;
+
+%% ------------------------------------------------------------------------
 % Compute MRvoxelvolume
 %% ------------------------------------------------------------------------
 VoISizeProduct = nan(nRows,1);
