@@ -1,7 +1,9 @@
 .DS_Store
-*.*asv
+**/*.asv
 stats/ProcSpectralQuality/.R*
 stats/ProcSpectralQuality/cheatsheets
 stats/ProcSpectralQuality/lme_example
 stats/ProcSpectralQuality/scripts/.R*
 .Rproj.user
+**/*.png
+**/*.csv
