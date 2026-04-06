@@ -208,7 +208,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     % Iterate along the list of block sizes, if applicable
 
     for kk=1:length(av_block_sizes)
-        out_part_avg = op_blockAvg(out_mn,av_block_sizes(kk));
+        out_part_avg = op_blockAvg(out_mn, av_block_sizes(kk));
         
         % do drift correction (if applicable) (code from Jamie)
         if opt.doDriftCorrection && out_part_avg.averages>1
@@ -260,7 +260,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     [~, index] = max(SNR_LW_ratios);
 
     if opt.doBlockAveraging || opt.doCompDriftCorrOnOff
-        disp([ident ': The best result is with block size ' num2str(av_eff_block_sizes(index)) '.'])
+        disp([ident ': The best result is with block size ' num2str(out_all{index}.block_size) '.'])
     end
 
     % Output the output with best SNR/LW
