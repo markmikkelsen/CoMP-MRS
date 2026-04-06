@@ -171,6 +171,8 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         out_mn=op_combinesubspecs(out_mn,"diff");
     end
 
+
+    numAveragesPerBlock = out_mn.rawAverages/out_mn.averages;
     % do bad averages removal, if applicable (code from Jamie)
     if opt.rmBadAvg
         out_mn=subBadAveragesRemoval(out_mn, ident, opt);
@@ -184,7 +186,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         av_block_sizes = divisors(out_mn.averages);
         
         % Some data are already partially averaged (Varian datasets)
-        av_eff_block_sizes = av_block_sizes*out_mn.rawAverages/out_mn.averages;
+        av_eff_block_sizes = av_block_sizes*numAveragesPerBlock;
     
         % Remove effective block sizes bigger than 32 (does not really make
         % sense to go higher than that)
@@ -197,12 +199,12 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         av_block_sizes    = [1 out_mn.averages];
 
         % Some data are already partially averaged (Varian datasets)
-        av_eff_block_sizes = av_block_sizes*out_mn.rawAverages/out_mn.averages;
+        av_eff_block_sizes = av_block_sizes*numAveragesPerBlock;
     
     else
         % Do not perform block averaging
         av_block_sizes    = 1;
-        av_eff_block_sizes= out_mn.rawAverages/out_mn.averages;
+        av_eff_block_sizes= numAveragesPerBlock;
     end
     
     % Iterate along the list of block sizes, if applicable
