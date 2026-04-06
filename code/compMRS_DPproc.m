@@ -266,7 +266,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     end
 
     % Output the output with best SNR/LW
-    out = out_all{kk};
+    out = out_all{index};
     outw= outw_mn;
 
     % Plot and save the result to check
