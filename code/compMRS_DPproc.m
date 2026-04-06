@@ -36,6 +36,7 @@ if ~exist('opt','var')
     opt.rmBadAvg            = 1;
     opt.doBlockAveraging    = 0;
     opt.doDriftCorrection   = 1;
+    opt.doCompDriftCorrOnOff= 1;
     opt.iterin              = 20;
     opt.tmaxin              = 0.2;
     opt.aaDomain            = 'f';
@@ -59,10 +60,10 @@ end
 
         %Loop through subjects and sessions.
 
-        out         = cell(check.nSubj,1);
-        outw        = cell(check.nSubj,1);
-        out_auto    = cell(check.nSubj,1);
-        outw_auto   = cell(check.nSubj,1);
+        out         = cell(check.nSubj, max(check.nSes));
+        outw        = cell(check.nSubj, max(check.nSes));
+        out_auto    = cell(check.nSubj, max(check.nSes));
+        outw_auto   = cell(check.nSubj, max(check.nSes));
 
         for m = 1:check.nSubj
             for n = 1:check.nSes(m)
@@ -189,6 +190,15 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         % sense to go higher than that)
         av_block_sizes    =av_block_sizes(av_eff_block_sizes<=32);
         av_eff_block_sizes=av_eff_block_sizes(av_eff_block_sizes<=32);
+    
+    elseif opt.doCompDriftCorrOnOff
+        %Compare with (block size 1) and without (block size = number of
+        %avg) drift correction
+        av_block_sizes    = [1 out_mn.averages];
+
+        % Some data are already partially averaged (Varian datasets)
+        av_eff_block_sizes = av_block_sizes*out_mn.rawAverages/out_mn.averages;
+    
     else
         % Do not perform block averaging
         av_block_sizes    = 1;
@@ -201,7 +211,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         out_part_avg = op_blockAvg(out_mn,av_block_sizes(kk));
         
         % do drift correction (if applicable) (code from Jamie)
-        if opt.doDriftCorrection
+        if opt.doDriftCorrection && out_part_avg.averages>1
             out_part_avg = subDriftCorrection(out_part_avg, ident, opt);
         end
 
@@ -249,8 +259,8 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     
     [~, index] = max(SNR_LW_ratios);
 
-    if opt.doBlockAveraging
-        disp(['The best result is with block size ' num2str(av_eff_block_sizes(index)) '.'])
+    if opt.doBlockAveraging || opt.doCompDriftCorrOnOff
+        disp([ident ': The best result is with block size ' num2str(av_eff_block_sizes(index)) '.'])
     end
 
     % Output the output with best SNR/LW
@@ -260,7 +270,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     % Plot and save the result to check
     plotlegend = {};
     for ii=1:length(out_all)
-        %plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
+        plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
     end
     
     f=figure ('name', ident);
