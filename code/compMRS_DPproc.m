@@ -42,11 +42,15 @@ if ~exist('opt','var')
     opt.aaDomain            = 'f';
     opt.autophase           = 1;
     opt.compFracGroupDelay  = 1;
-    opt.exception.extWaterOff.ListDPsub     =   [22,4,1; 22,7,1;...
-                                                 19,1,1; 19,2,1; 19,3,1; 19,4,1; 19,5,1; 19,6,1; 19,7,1; 19,8,1;...
+    % *** EM: handle special cases (07.04.2026)
+    opt.exception.extWaterOff.ListDPsub     =   [22,4,1; 22,7,1;... % (DPid, idsubject, idses)
+                                                 19,1,1; 19,2,1; 19,3,1; 19,4,1; 19,5,1; 19,6,1; 19,7,1; 19,8,1;...% (DPid, idsubject, idses)
                                                  14,1,1; 14,2,1; 14,3,1; 14,4,1; 14,5,1; 14,6,1; 14,7,1; 14,8,1] ;% EM: handle special cases (07.04.2026) (DPid, idsubject, idses): remove separated water
     opt.exception.discardData.ListDPsub     =   [5,2,1; 16,2,1;...
                                                  17,1,1; 17,2,1; 17,3,1; 17,4,1; 17,5,1; 17,6,1; 17,7,1; 17,8,1] ;% EM: handle special cases (07.04.2026) (DPid, idsubject, idses): remove data (corrupted dataset or poor data quality)
+    opt.exception.manualRephase.listIdent     =   {['DP30_sub-8_ses-1'  '_sepWater']}; % % EM: handle special cases (07.04.2026)
+    opt.exception.manualRephase.listPhase     =   [-70,1.5, 2 ]; % % EM: handle special cases (07.04.2026) (ph0(°), ph1, ppm0) for each DPid, idsubject in opt.exception.manuallyRephase.ListDPsub 
+    % *** EM: handle special cases (07.04.2026)
 end
 
 
@@ -78,6 +82,11 @@ end
         for ii = 1 : size(opt.exception.discardData.ListDPsub,1)
             opt.exception.discardData.listIdent{ii} = (['DP' num2str(opt.exception.discardData.ListDPsub(ii,1)) '_sub-' num2str(opt.exception.discardData.ListDPsub(ii,2)) '_ses-' num2str(opt.exception.discardData.ListDPsub(ii,3))]);
         end
+
+        % for ii = 1 : size(opt.exception.manualRephase.ListDPsub,1)
+        %     opt.exception.manualRephase.listIdent{ii} = (['DP' num2str(opt.exception.manualRephase.ListDPsub(ii,1)) '_sub-' num2str(opt.exception.manualRephase.ListDPsub(ii,2)) '_ses-' num2str(opt.exception.manualRephase.ListDPsub(ii,3))]);
+        % end
+
         %  --- EM: handle special case (end) (EM 07.04.2026)----
     
         
@@ -257,9 +266,12 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         %out_part_avg=op_addphase(out_part_avg, -in_mn.rp, -(in_mn.lp/360.0*in_mn.dwelltime), max(in_mn.ppm), 1);  
 
         % Final phasing (0-order phase)
-        if opt.autophase
+        if opt.autophase && sum(contains(opt.exception.manualRephase.listIdent,ident))==0
             out_part_avg = op_autophase(out_part_avg, 1.8, 2.2);
              % out_part_avg = op_autophase(out_part_avg, 0.4, 4.1); % EM Test 27.02.2026
+        elseif sum(contains(opt.exception.manualRephase.listIdent,ident))==1
+            idxTmp = find(contains(opt.exception.manualRephase.listIdent,ident));
+            out_part_avg=op_addphase(out_part_avg, opt.exception.manualRephase.listPhase(idxTmp,1), (opt.exception.manualRephase.listPhase(idxTmp,2).*in_mn.dwelltime), opt.exception.manualRephase.listPhase(idxTmp,3), 1);  
         end
         
         % Compute the quality metrics
