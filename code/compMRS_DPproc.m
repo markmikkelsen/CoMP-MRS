@@ -102,7 +102,6 @@ end
                 %ident = [DPid '_sub-' num2str(m) '_ses-' num2str(n)];
                 % If separate water scan is available
                 % if ~isempty(inw) && ~isempty(inw{m, n}) 
-                % if ~isempty(inw) && ~isempty(inw{m, n}) && isempty(find(sum(opt.exception.extWaterOff.ListDPsub==[DPid,m,n],2)==3,1)) && isempty(find(sum(opt.exception.discardData.ListDPsub==[DPid,m,n],2)==3,1))  % EM: handle special cases (07.04.2026)
                 if ~isempty(inw) && ~isempty(inw{m, n}) && sum(contains(opt.exception.extWaterOff.listIdent,ident))==0 && sum(contains(opt.exception.discardData.listIdent,ident))==0  % EM: handle special cases (07.04.2026)
                     disp_writelog_v26(opt.debug_path, opt.debug_FileName,['*** Processing water sep'])  % ---> EM 27.02.2026-----
                     [out{m}{n}, outw{m}{n}] = compMRS_DPproc_sub(in{m, n}, inw{m, n}, [ident  '_sepWater'], check, opt);
