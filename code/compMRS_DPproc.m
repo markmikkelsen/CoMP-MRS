@@ -37,6 +37,7 @@ if ~exist('opt','var')
     opt.rmBadAvg            = 1;
     opt.doBlockAveraging    = 0;
     opt.doDriftCorrection   = 1;
+    opt.doCompDriftCorrOnOff= 1;
     opt.iterin              = 20;
     opt.tmaxin              = 0.2;
     opt.aaDomain            = 'f';
@@ -95,10 +96,10 @@ end
 
         %Loop through subjects and sessions.
 
-        out         = cell(check.nSubj,1);
-        outw        = cell(check.nSubj,1);
-        out_auto    = cell(check.nSubj,1);
-        outw_auto   = cell(check.nSubj,1);
+        out         = cell(check.nSubj, max(check.nSes));
+        outw        = cell(check.nSubj, max(check.nSes));
+        out_auto    = cell(check.nSubj, max(check.nSes));
+        outw_auto   = cell(check.nSubj, max(check.nSes));
 
         for m = 1:check.nSubj
             for n = 1:check.nSes(m)
@@ -212,6 +213,8 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         out_mn=op_combinesubspecs(out_mn,"diff");
     end
 
+
+    numAveragesPerBlock = out_mn.rawAverages/out_mn.averages;
     % do bad averages removal, if applicable (code from Jamie)
     if opt.rmBadAvg
         out_mn=subBadAveragesRemoval(out_mn, ident, opt);
@@ -225,25 +228,34 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         av_block_sizes = divisors(out_mn.averages);
         
         % Some data are already partially averaged (Varian datasets)
-        av_eff_block_sizes = av_block_sizes*out_mn.rawAverages/out_mn.averages;
+        av_eff_block_sizes = av_block_sizes*numAveragesPerBlock;
     
         % Remove effective block sizes bigger than 32 (does not really make
         % sense to go higher than that)
         av_block_sizes    =av_block_sizes(av_eff_block_sizes<=32);
         av_eff_block_sizes=av_eff_block_sizes(av_eff_block_sizes<=32);
+    
+    elseif opt.doCompDriftCorrOnOff
+        %Compare with (block size 1) and without (block size = number of
+        %avg) drift correction
+        av_block_sizes    = [1 out_mn.averages];
+
+        % Some data are already partially averaged (Varian datasets)
+        av_eff_block_sizes = av_block_sizes*numAveragesPerBlock;
+    
     else
         % Do not perform block averaging
         av_block_sizes    = 1;
-        av_eff_block_sizes= out_mn.rawAverages/out_mn.averages;
+        av_eff_block_sizes= numAveragesPerBlock;
     end
     
     % Iterate along the list of block sizes, if applicable
 
     for kk=1:length(av_block_sizes)
-        out_part_avg = op_blockAvg(out_mn,av_block_sizes(kk));
+        out_part_avg = op_blockAvg(out_mn, av_block_sizes(kk));
         
         % do drift correction (if applicable) (code from Jamie)
-        if opt.doDriftCorrection
+        if opt.doDriftCorrection && out_part_avg.averages>1
             out_part_avg = subDriftCorrection(out_part_avg, ident, opt);
         end
 
@@ -276,11 +288,13 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         
         % Compute the quality metrics
         % Get LW (of NAA) and SNR
-        [FWHM_NAA] = op_getLW(out_part_avg, 1.8, 2.2, 8, 1);
-        [SNR]=op_getSNR(out_part_avg,1.8,2.2,-2, 0, 1);
+        [~,f_NAA]=op_getPeakHeight(out_part_avg,1.8,2.2);
+        [FWHM_NAA,FWHM_NAA_hz] = op_getLW(out_part_avg, f_NAA-0.1, f_NAA+0.1, 8, 1);
+        [SNR]=op_getSNR(out_part_avg,f_NAA-0.1,f_NAA+0.1,-2, 0, 1);
         
         out_part_avg.SNR = SNR;
         out_part_avg.LW = FWHM_NAA;
+        out_part_avg.LW_hz = FWHM_NAA_hz;
         out_part_avg.SNR_LW_ratio = SNR/FWHM_NAA;
         out_part_avg.block_size = av_eff_block_sizes(kk);
         out_all{kk}=out_part_avg;
@@ -302,13 +316,13 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     end
 
     % Output the output with best SNR/LW
-    out = out_all{kk};
+    out = out_all{index};
     outw= outw_mn;
 
     % Plot and save the result to check
     plotlegend = {};
     for ii=1:length(out_all)
-        %plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
+        plotlegend{ii} = [num2str(out_all{ii}.block_size) ' avg/block'];
     end
     
     f=figure ('name', ident);

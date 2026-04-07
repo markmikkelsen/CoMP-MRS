@@ -33,7 +33,7 @@ function [out, outw, out_auto, outw_auto]=compMRS_DPproc_allDPs()
     outw        = cell(1,length(res));
     out_auto    = cell(1,length(res));
     outw_auto   = cell(1,length(res));
-    for ii=1:length(res)
+    parfor ii=1:length(res)
         try
         [out{ii}, outw{ii}, out_auto{ii}, outw_auto{ii}]=compMRS_DPproc(res(ii).name);
         catch 
