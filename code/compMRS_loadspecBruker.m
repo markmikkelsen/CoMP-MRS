@@ -799,7 +799,7 @@ if strcmp(sequence, 'SPECIAL') && (dims.subSpecs==0) % Here we checked that it w
     specs=fftshift(ifft(fids,[],1),1);
     rawRepetitions=2;
     rawSubspecs = 2;
-    averages = size(fids, 3);
+    averages = 2*size(fids, 3);
     dims.subSpecs = 4;
     sz = size(fids);
 end
