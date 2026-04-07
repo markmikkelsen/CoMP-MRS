@@ -230,11 +230,13 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
         
         % Compute the quality metrics
         % Get LW (of NAA) and SNR
-        [FWHM_NAA] = op_getLW(out_part_avg, 1.8, 2.2, 8, 1);
-        [SNR]=op_getSNR(out_part_avg,1.8,2.2,-2, 0, 1);
+        [~,f_NAA]=op_getPeakHeight(out_part_avg,1.8,2.2);
+        [FWHM_NAA,FWHM_NAA_hz] = op_getLW(out_part_avg, f_NAA-0.1, f_NAA+0.1, 8, 1);
+        [SNR]=op_getSNR(out_part_avg,f_NAA-0.1,f_NAA+0.1,-2, 0, 1);
         
         out_part_avg.SNR = SNR;
         out_part_avg.LW = FWHM_NAA;
+        out_part_avg.LW_hz = FWHM_NAA_hz;
         out_part_avg.SNR_LW_ratio = SNR/FWHM_NAA;
         out_part_avg.block_size = av_eff_block_sizes(kk);
         out_all{kk}=out_part_avg;
