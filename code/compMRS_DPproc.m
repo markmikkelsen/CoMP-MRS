@@ -309,7 +309,7 @@ function [out, outw] = compMRS_DPproc_sub(in_mn, inw_mn, ident, check, opt)
     
     [~, index] = max(SNR_LW_ratios);
 
-    if opt.doBlockAveraging
+    if opt.doBlockAveraging || opt.doCompDriftCorrOnOff
         % disp(['The best result is with block size ' num2str(av_eff_block_sizes(index)) '.']) % <--- EM 27.02.2026-----
         disp_writelog_v26(opt.debug_path, opt.debug_FileName,['The best result is with block size ' num2str(av_eff_block_sizes(index)) '.'])  % ---> EM 27.02.2026-----
  
