@@ -1,24 +1,12 @@
 # Linear mixed-effects modeling
 
-RunLMEMs <- function(
-    data,
-    dv = "",
-    rand_ef = list(),
-    fix_ef = "",
-    show_model_diagnostics = FALSE,
-    run_pbkrtest = FALSE
-) {
+RunLMEM <- function(data, dv = "", rand_ef = list(), fix_ef = "") {
   
-  cat("\n── Running linear mixed-effects models (LMEMs) ──\n")
-  
+  cat("\n── Running linear mixed-effects model (LMEM) ──\n")
   
   # Fit dynamic lmer models ---------------------------------------------------
   
-  fit_lmer <- function(response,
-                       fixed_effects,
-                       random_effects,
-                       data,
-                       ...) {
+  fit_lmer <- function(response, random_effects, fixed_effects, data, ...) {
     #' Dynamically build and fit a linear mixed model using lmer
     
     #'
@@ -41,14 +29,14 @@ RunLMEMs <- function(
     # --- validate inputs ---
     stopifnot(
       is.character(response), length(response) == 1,
-      is.character(fixed_effects), length(fixed_effects) >= 1,
       is.list(random_effects), length(random_effects) >= 1,
       !is.null(names(random_effects)),
+      is.character(fixed_effects), length(fixed_effects) >= 1,
       is.data.frame(data)
     )
     
     # --- fixed-effects part ---
-    if (nchar(fixed_effects) == 0) {
+    if (length(fixed_effects) == 1 && nchar(fixed_effects) == 0) {
       fixed_part <- "1"
     } else {
       fixed_part <- paste(fixed_effects, collapse = " + ")
@@ -75,7 +63,7 @@ RunLMEMs <- function(
   }
   
   
-  # Selection of optimizers to use ----------------------------------------------
+  # Selection of optimizers to use --------------------------------------------
   
   optWrap.nloptwrap     <- lmerControl(optimizer = "nloptwrap")
   optWrap.optimx.nlminb <- lmerControl(optimizer = "optimx", optCtrl = list(method = "nlminb", eval.max = 1e5))
@@ -86,25 +74,17 @@ RunLMEMs <- function(
   
   # Remove rows with missing values -------------------------------------------
   
-  data <- drop_na(data, .data[[dv]], "MRfield", "DP")
+  data <- drop_na(data, .data[[dv]])
   
   
   # Models --------------------------------------------------------------------
   
-  # f <- as.formula(paste(response, "~", predictor, "+ (1 |", random_effect, ")"))
-  # f <- as.formula(paste(dv, "~ 1"))
-  
-  # M.SNRLWrationorm.0.0 <- lm(as.formula(paste(dv, "~ 1")), data = data)
-  # M.SNRLWrationorm.0.1 <- lme4::lmer(as.formula(paste(dv, "~ (1 |", re, ")")), 
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  
-  
-  M.SNRLWrationorm.0.1 <- fit_lmer(
+  M <- fit_lmer(
     response = dv,
-    fixed_effects = fix_ef,
     random_effects = rand_ef,
+    fixed_effects = fix_ef,
     data = data,
-    REML = FALSE,
+    REML = TRUE,
     control = optimToUse
   )
   
@@ -137,27 +117,7 @@ RunLMEMs <- function(
   # M.SNRLWrationorm.6.1 <- lme4::lmer(dv ~  AnimalSex + (AnimalSex | DP),
   #                                    data = data, REML = FALSE, control = optimToUse)
   
-  
-  # Model diagnostics ---------------------------------------------------------
-  
-  model <- M.SNRLWrationorm.0.1
-  
-  if (show_model_diagnostics) {
-    
-    cat("\n── Random-effects diagnostics ──\n")
-    print(dotplot(ranef(model, condVar = TRUE), scales = "free"))
-    
-    cat("\n── Model performance indices ──\n")
-    print(model_performance(model))
-    
-    cat("\n── Intraclass Correlation Coefficient (ICC) ──\n")
-    print(icc(model))
-    
-    cat("\n── Check model assumptions (performance) ──\n")
-    chk <- check_model(model)
-    print(chk)
-    
-  }
+
   
   
   # Variance components -------------------------------------------------------
@@ -189,25 +149,25 @@ RunLMEMs <- function(
   # confint(M.SNRLWrationorm.4.0, parm = c(3,4), level = 0.95, method = "boot",
   #         nsim = 500, boot.type = "perc")
   
-  if (run_pbkrtest) {
-    
-    # Set up parallel computation for bootstrapping
-    nc <- detectCores()
-    clus <- makeCluster(rep("localhost", nc))
-    clusterEvalQ(clus, {
-      library(lme4)
-      library(pbkrtest)
-    })
-    clusterExport(clus, c("nloptr", "defaultControl", "nloptFun",
-                          "data", "M.SNRLWrationorm.0.full", "M.SNRLWrationorm.3.0"))
-    
-    # Bootstrap likelihood ratio tests
-    PB_LRT.1 <- PBmodcomp(M.SNRLWrationorm.3.0, M.SNRLWrationorm.0.full, nsim = 2e3, cl = clus)
-    
-    stopCluster(clus)
-    
-  }
+  # if (run_pbkrtest) {
+  #   
+  #   # Set up parallel computation for bootstrapping
+  #   nc <- detectCores()
+  #   clus <- makeCluster(rep("localhost", nc))
+  #   clusterEvalQ(clus, {
+  #     library(lme4)
+  #     library(pbkrtest)
+  #   })
+  #   clusterExport(clus, c("nloptr", "defaultControl", "nloptFun",
+  #                         "data", "M.SNRLWrationorm.0.full", "M.SNRLWrationorm.3.0"))
+  #   
+  #   # Bootstrap likelihood ratio tests
+  #   PB_LRT.1 <- PBmodcomp(M.SNRLWrationorm.3.0, M.SNRLWrationorm.0.full, nsim = 2e3, cl = clus)
+  #   
+  #   stopCluster(clus)
+  #   
+  # }
   
-  return(M.SNRLWrationorm.0.1)
+  return(M)
   
 }

@@ -269,13 +269,11 @@ mad_outlier_removal <- function(data,
                 report$n_flagged, report$pct_removed, report$n_clean))
   }
   
-  return(
-    list(
-      data         = data,
-      data_clean   = data_clean,
-      outlier_flag = data[[flag_col]],
-      report       = report
-    )
+  list(
+    data         = data,
+    data_clean   = data_clean,
+    outlier_flag = data[[flag_col]],
+    report       = report
   )
   
 }

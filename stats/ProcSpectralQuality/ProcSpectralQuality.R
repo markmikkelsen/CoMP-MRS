@@ -52,7 +52,7 @@ source(file.path(base_dir, "scripts", "SaveCSV.R"))
 source(file.path(base_dir, "scripts", "PlotPieCharts.R"))
 source(file.path(base_dir, "scripts", "PlotDotPlots.R"))
 source(file.path(base_dir, "scripts", "PlotBoxPlots.R"))
-source(file.path(base_dir, "scripts", "RunLMEMs.R"))
+source(file.path(base_dir, "scripts", "RunLMEM.R"))
 
 
 # Analysis options ------------------------------------------------------------
@@ -145,15 +145,67 @@ if (show_box_plots) {
 
 # Run linear mixed-effects modeling -------------------------------------------
 
-M.SNRLWrationorm <- RunLMEMs(
-  data = DATA$data,
-  dv = "SNR_LW_Ratio_norm",
-  rand_ef = list(
+### Variables -----------------------------------------------------------------
+
+dv <- "SNR_LW_Ratio_norm"
+
+random_effects <- list(
+  M.SNRLWrationorm.0.1 = list(
     DP = "1"
   ),
-  show_model_diagnostics = show_model_diagnostics,
-  run_pbkrtest = run_pbkrtest
+  M.SNRLWrationorm.0.2 = list(
+    SiteID = "1"
+  ),
+  M.SNRLWrationorm.0.3 = list(
+    MRvendor = "1"
+  )
 )
+
+fixed_effects <- list(
+  M.SNRLWrationorm.0.1 = c(
+    ""
+  ),
+  M.SNRLWrationorm.0.2 = c(
+    ""
+  ),
+  M.SNRLWrationorm.0.3 = c(
+    ""
+  )
+)
+
+### Run LMEM models -----------------------------------------------------------
+
+LMEM_MODELS <- lapply(names(random_effects), function(model_name) {
+  RunLMEM(
+    data = DATA$data,
+    dv = dv,
+    rand_ef = random_effects[[model_name]],
+    fix_ef = fixed_effects[[model_name]]
+  )
+})
+names(LMEM_MODELS) <- names(random_effects)
+
+### Model diagnostics ---------------------------------------------------------
+
+# model <- M.SNRLWrationorm
+# 
+# if (show_model_diagnostics) {
+#   
+#   cat("\n── Random-effects diagnostics ──\n")
+#   re <- ranef(model, condVar = TRUE)
+#   vapply(re, function(g) {
+#     print(dotplot(re, scales = "free"))
+#   }, list(1))
+#   # print(dotplot(ranef(model, condVar = TRUE), scales = "free"))
+#   
+#   cat("\n── Model performance indices ──\n")
+#   m_pef <- model_performance(model)
+#   
+#   cat("\n── Check model assumptions (performance) ──\n")
+#   chk <- check_model(model)
+#   print(chk)
+#   
+# }
 
 
 
