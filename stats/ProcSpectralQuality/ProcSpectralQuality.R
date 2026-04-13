@@ -53,6 +53,7 @@ source(file.path(base_dir, "scripts", "PlotPieCharts.R"))
 source(file.path(base_dir, "scripts", "PlotDotPlots.R"))
 source(file.path(base_dir, "scripts", "PlotBoxPlots.R"))
 source(file.path(base_dir, "scripts", "RunLMEM.R"))
+source(file.path(base_dir, "scripts", "ExtractVPCs.R"))
 
 
 # Analysis options ------------------------------------------------------------
@@ -64,6 +65,7 @@ show_dot_plots         <- FALSE  # Set to TRUE to create dot plots of spectral q
 show_box_plots         <- TRUE  # Set to TRUE to create box plots of spectral quality metrics by different grouping variables
 # show_facet_plots       <- FALSE # Set to TRUE to create facet plots of spectral quality metrics by different grouping variables
 show_model_diagnostics <- TRUE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
+calc_VPCs              <- TRUE # Set to TRUE to calculate variance partition coefficients (VPCs) from linear mixed-effects models to assess the proportion of variance explained by each random effect
 run_pbkrtest           <- FALSE # Set to TRUE to run Kenward-Roger approximation for linear mixed-effects models (can be time-consuming with larger datasets)
 
 
@@ -158,6 +160,13 @@ random_effects <- list(
   ),
   M.SNRLWrationorm.0.3 = list(
     MRvendor = "1"
+  ),
+  M.SNRLWrationorm.0.4 = list(
+    MRsequence = "1"
+  ),
+  M.SNRLWrationorm.0.5 = list(
+    DP = "1",
+    MRsequence = "1"
   )
 )
 
@@ -169,6 +178,12 @@ fixed_effects <- list(
     ""
   ),
   M.SNRLWrationorm.0.3 = c(
+    ""
+  ),
+  M.SNRLWrationorm.0.4 = c(
+    ""
+  ),
+  M.SNRLWrationorm.0.5 = c(
     ""
   )
 )
@@ -207,5 +222,8 @@ names(LMEM_MODELS) <- names(random_effects)
 #   
 # }
 
+### Variance partitioning -----------------------------------------------------
 
-
+if (calc_VPCs) {
+  VPCs <- ExtractVPCs(LMEM_MODELS, verbose = TRUE)
+}

@@ -28,7 +28,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
       )
     
     n_levels <- nlevels(plot_data[[x_var]])
-    nth <- max(1, round(n_levels / 10))
+    nth <- max(1, round(n_levels / 50))
     
     if (n_levels > 10) {
       a <- 45

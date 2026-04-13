@@ -5,29 +5,23 @@
 theme_comp <- function() {
   theme_classic() +
     theme(
-      plot.title = element_text(
-        face = "bold",
-        size = 16,
-        hjust = 0.5,
-        color = "black",
-        family = "serif"
-      ),
+      plot.title = element_blank(),
       axis.title = element_text(
         face = "bold",
         size = 13,
         color = "black",
-        family = "serif"
+        family = "sans"
       ),
       axis.text = element_text(
         size = 11,
         color = "black",
-        family = "serif"
+        family = "sans"
       ),
       strip.text = element_text(
         face = "bold",
         size = 12,
         color = "black",
-        family = "serif"
+        family = "sans"
       ),
       legend.position = "none",
       axis.line = element_line(color = "black", linewidth = 0.4),
@@ -53,3 +47,5 @@ nloptFun <- function(fn, par, lower, upper, control = list(), ...) {
 # For standardizing (z-transforming) outcome and predictor variables; aids with
 # model convergence and interpretability of parameter estimates
 cs. <- function(x) scale(x, center = TRUE, scale = TRUE)
+
+

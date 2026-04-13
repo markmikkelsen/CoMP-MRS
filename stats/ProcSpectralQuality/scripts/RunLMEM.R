@@ -117,23 +117,8 @@ RunLMEM <- function(data, dv = "", rand_ef = list(), fix_ef = "") {
   # M.SNRLWrationorm.6.1 <- lme4::lmer(dv ~  AnimalSex + (AnimalSex | DP),
   #                                    data = data, REML = FALSE, control = optimToUse)
   
+  
 
-  
-  
-  # Variance components -------------------------------------------------------
-  
-  # Save variance components of three-level null model
-  # print(VarCorr(M.SNRLWrationorm.0.1), comp = c("Variance", "Std.Dev."))
-  
-  # vc <- as.data.frame(VarCorr(M.SNRLWrationorm.0.full))[4]
-  # vpc.M.0.full <- round(vc/sum(vc)*100,1)
-  # dimnames(vpc.M.0.full)[[1]] <- c("DP", "Residual")
-  
-  # vc <- as.data.frame(VarCorr(M.SNRLWrationorm.3.0))[4]
-  # vpc.M.3.0 <- round(vc/sum(vc)*100,1)
-  # dimnames(vpc.M.3.0)[[1]] <- c("MRsequence","DP", "Residual")
-  
-  
   # Inferential tests ---------------------------------------------------------
   
   # Compare null model to model with DP random effect
