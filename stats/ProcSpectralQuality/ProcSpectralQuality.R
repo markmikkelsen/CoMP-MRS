@@ -66,13 +66,17 @@ show_box_plots         <- TRUE  # Set to TRUE to create box plots of spectral qu
 # show_facet_plots       <- FALSE # Set to TRUE to create facet plots of spectral quality metrics by different grouping variables
 show_model_diagnostics <- TRUE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
 calc_VPCs              <- TRUE # Set to TRUE to calculate variance partition coefficients (VPCs) from linear mixed-effects models to assess the proportion of variance explained by each random effect
-run_pbkrtest           <- FALSE # Set to TRUE to run Kenward-Roger approximation for linear mixed-effects models (can be time-consuming with larger datasets)
+run_pbkrtest           <- TRUE # Set to TRUE to run parametric bootstrapping using the pbkrtest package 
+                               # to compare linear mixed-effects models with different random effects structures
+                               # and derive p-values for the added random effects (can be time-consuming with larger datasets)
 
 
 # Load data -------------------------------------------------------------------
+# Also clean up data (incl. outlier removal) and create new variables (e.g., normalized SNR/LW ratio)
 
 DATA <- LoadData(
   csv_file = file.path(data_dir, "CoMP_MRS_Rstats_input.csv"),
+  outl_rm_strategy = "group",
   verbose = TRUE
 )
 
@@ -227,3 +231,28 @@ names(LMEM_MODELS) <- names(random_effects)
 if (calc_VPCs) {
   VPCs <- ExtractVPCs(LMEM_MODELS, verbose = TRUE)
 }
+
+### Inference by LRT with parametric bootstrapping ----------------------------
+
+# Compare large model with smaller model to derive p-value for added random effect (e.g., MRsequence)
+# Note, models have to be fitted with REML = FALSE for valid comparison by LRT,
+# and this can be time-consuming with larger datasets
+if (run_pbkrtest) {
+  large_model <- LMEM_MODELS$M.SNRLWrationorm.0.5
+  small_model <- LMEM_MODELS$M.SNRLWrationorm.0.1
+  KR_results  <- pbkrtest::PBmodcomp(large_model, small_model, nsim = 1e3)
+  print(KR_results)
+}
+
+# Confidence intervals for fixed effects (intercept)
+# confint(Y.M1.3, parm=c(3,4), level = 0.95, method = "boot", nsim = 1e3, boot.type = "perc")
+# Bootstrapping
+# b.par1 <- bootMer(Y.M0.3, fixef, nsim=1e4)
+# b.par2 <- bootMer(Y.M1.3, fixef, nsim=1e4)
+# boot.ci(b.par1, conf=0.95, type="perc", index=1)
+# boot.ci(b.par2, conf=0.95, type="perc", index=1)
+
+
+
+
+
