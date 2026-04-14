@@ -206,25 +206,25 @@ names(LMEM_MODELS) <- names(random_effects)
 
 ### Model diagnostics ---------------------------------------------------------
 
-# model <- M.SNRLWrationorm
-# 
-# if (show_model_diagnostics) {
-#   
-#   cat("\n── Random-effects diagnostics ──\n")
-#   re <- ranef(model, condVar = TRUE)
-#   vapply(re, function(g) {
-#     print(dotplot(re, scales = "free"))
-#   }, list(1))
-#   # print(dotplot(ranef(model, condVar = TRUE), scales = "free"))
-#   
-#   cat("\n── Model performance indices ──\n")
-#   m_pef <- model_performance(model)
-#   
-#   cat("\n── Check model assumptions (performance) ──\n")
-#   chk <- check_model(model)
-#   print(chk)
-#   
-# }
+if (show_model_diagnostics) {
+
+  for (model_name in names(LMEM_MODELS)) {
+    model <- LMEM_MODELS[[model_name]]
+
+    cat(sprintf("\n══ Model diagnostics: %s ══\n", model_name))
+
+    cat("\n── Random-effects diagnostics ──\n")
+    re <- ranef(model, condVar = TRUE)
+    print(dotplot(re, scales = "free"))
+
+    cat("\n── Model performance indices ──\n")
+    print(model_performance(model))
+
+    cat("\n── Check model assumptions ──\n")
+    print(check_model(model))
+  }
+
+}
 
 ### Variance partitioning -----------------------------------------------------
 
