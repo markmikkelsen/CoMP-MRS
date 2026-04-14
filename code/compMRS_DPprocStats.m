@@ -29,15 +29,16 @@ clear; clc;
 % siteFile = fullfile(data_dir,'CoMP-MRS-sites.xlsx');
 % outCsv   = fullfile(data_dir,'CoMP_MRS_Rstats_input_v1.csv');
 
-cd('A:\CoMP-MRS\Data\data\supplementary')
+cd('A:\CoMP-MRS\CoMP-MRS-DGR\stats\ProcSpectralQuality\data\input_table\v2_20260414')
 %% File names
 xlsxFile = 'CoMP-MRS_participantSpreadsheet.xlsx';
-matFile  = 'CoMP-MRS.mat';
+matFile  = 'CoMP-MRS-final.mat';
 siteFile = 'CoMP-MRS-sites.xlsx';
 outCsv   = 'CoMP_MRS_Rstats_input.csv';
 
+%% HARD-CODE EXCEPTIONS! e.g. (dpNumber == 16 && subjNum == 2)
+
 %% Exceptions
-% DP05-sub-02 corrupted data
 % DP07-sub-01 rejected due to distortions; SNR/LW ~ 0.3;
 % DP16-sub-02 corrupted data
 % DP17-sub01, sub-04 discard due to poor quality
@@ -295,13 +296,13 @@ nDPinMat = size(out,2);
 % If empty/missing, fall back to matData.out_auto
 %
 % Exceptions:
-% DP05-sub-02 -> force NaN, fail
 % DP16-sub-02 -> force NaN, fail
 %
 % For these DPs, later subjects are shifted by -1 in the MAT data because
 % sub-02 is missing/corrupted there.
 %% ------------------------------------------------------------------------
 LW = nan(nRows,1);
+LW_hz = nan(nRows,1);
 SNR = nan(nRows,1);
 SNR_LW_ratio = nan(nRows,1);
 
@@ -321,8 +322,9 @@ for i = 1:nRows
     end
 
     % ---- Hard-coded exceptions for corrupted sub-02 ----
-    if (dpNumber == 5 && subjNum == 2) || (dpNumber == 16 && subjNum == 2)
+    if (dpNumber == 16 && subjNum == 2)
         LW(i) = NaN;
+        LW_hz(i) = NaN;
         SNR(i) = NaN;
         SNR_LW_ratio(i) = NaN;
         CompCheck(i) = "fail";
@@ -354,12 +356,16 @@ for i = 1:nRows
 
     % Read values from out if present
     lw_val = NaN;
+    lwhz_val = NaN;
     snr_val = NaN;
     ratio_val = NaN;
 
     if ~isempty(metricStruct)
         if isfield(metricStruct,'LW') && ~isempty(metricStruct.LW)
             lw_val = metricStruct.LW;
+        end
+        if isfield(metricStruct,'LW_hz') && ~isempty(metricStruct.LW_hz)
+            lwhz_val = metricStruct.LW_hz;
         end
         if isfield(metricStruct,'SNR') && ~isempty(metricStruct.SNR)
             snr_val = metricStruct.SNR;
@@ -370,7 +376,7 @@ for i = 1:nRows
     end
 
     % ---- Use out_auto only for values still missing ----
-    needsFallback = isnan(lw_val) || isnan(snr_val) || isnan(ratio_val);
+    needsFallback = isnan(lw_val) || isnan(lwhz_val) || isnan(snr_val) || isnan(ratio_val);
 
     if needsFallback && ~isempty(out_auto) && dpNumber <= size(out_auto,2)
         try
@@ -383,6 +389,9 @@ for i = 1:nRows
                 if isstruct(candidateStruct_auto)
                     if isnan(lw_val) && isfield(candidateStruct_auto,'LW') && ~isempty(candidateStruct_auto.LW)
                         lw_val = candidateStruct_auto.LW;
+                    end
+                    if isnan(lwhz_val) && isfield(candidateStruct_auto,'LW_hz') && ~isempty(candidateStruct_auto.LW_hz)
+                        lwhz_val = candidateStruct_auto.LW_hz;
                     end
                     if isnan(snr_val) && isfield(candidateStruct_auto,'SNR') && ~isempty(candidateStruct_auto.SNR)
                         snr_val = candidateStruct_auto.SNR;
@@ -397,6 +406,7 @@ for i = 1:nRows
     end
 
     LW(i) = lw_val;
+    LW_hz(i) = lwhz_val;
     SNR(i) = snr_val;
     SNR_LW_ratio(i) = ratio_val;
 end
@@ -407,6 +417,7 @@ end
 participantTable.DP = dpLabels;
 participantTable.SubjectInDP = subjectNumberWithinDP;
 participantTable.LW = LW;
+participantTable.LW_hz = LW_hz;
 participantTable.SNR = SNR;
 participantTable.SNR_LW_Ratio = SNR_LW_ratio;
 
