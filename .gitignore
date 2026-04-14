@@ -1,5 +1,6 @@
 .DS_Store
-*.*asv
+.Rproj.user
+**/*.asv
 stats/ProcSpectralQuality/.R*
 stats/ProcSpectralQuality/cheatsheets
 stats/ProcSpectralQuality/lme_example
@@ -8,3 +9,4 @@ stats/ProcSpectralQuality/scripts/.R*
 *.mat
 *.png
 *.fig
+
