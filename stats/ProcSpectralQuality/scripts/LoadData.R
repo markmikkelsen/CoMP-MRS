@@ -1,6 +1,6 @@
 # Load CoMP-MRS data and perform initial cleaning and outlier removal
 
-LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv",  verbose = TRUE) {
+LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv", outl_rm_strategy = "group",  verbose = TRUE) {
   
   # Load the participants.csv file with appropriate column types
   DATA <- read_csv(
@@ -70,7 +70,7 @@ LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv",  verbose = TRUE) {
     data      = DATA,
     outcome   = "SNR_LW_Ratio_norm",
     groups    = "DP",  # outer → inner
-    strategy  = "group",  # options: "global", "group", "multilevel"
+    strategy  = outl_rm_strategy,  # options: "global", "group", "multilevel"
     threshold = 2.5,
     verbose = verbose
   )
