@@ -47,5 +47,3 @@ nloptFun <- function(fn, par, lower, upper, control = list(), ...) {
 # For standardizing (z-transforming) outcome and predictor variables; aids with
 # model convergence and interpretability of parameter estimates
 cs. <- function(x) scale(x, center = TRUE, scale = TRUE)
-
-
