@@ -12,6 +12,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
   # Box plot function ---------------------------------------------------------
 
   make_box_plot <- function(data, x_var, y_var, y_label, group_var, out_dir, file_name) {
+    
     every_nth <- function(n) {
       function(x) x[seq(1, length(x), by = n)]
     }
@@ -38,6 +39,14 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
       j <- 0.5
     }
     
+    if (n_levels > 10) {
+      plot_width <- 11
+    } else if (n_levels > 5) {
+      plot_width <- 8
+    } else {
+      plot_width <- 5
+    }
+
     p <- ggplot(
       plot_data,
       aes(
@@ -46,7 +55,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
       )
     ) +
       geom_boxplot(
-        fill = "#EA7E2D",
+        fill = "#4C77C2",
         width = 0.65,
         alpha = 0.9,
         outlier.shape = 21,
@@ -76,9 +85,9 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
     print(p)
 
     ggsave(
-      file.path(out_dir, file_name),
+      filename = file.path(out_dir, file_name),
       plot = p,
-      width = 11,
+      width = plot_width,
       height = 5,
       units = "in",
       dpi = 300

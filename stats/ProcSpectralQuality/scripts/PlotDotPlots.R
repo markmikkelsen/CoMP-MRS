@@ -49,7 +49,7 @@ PlotDotPlots <- function(data, data_orig, out_dir) {
         # color = group_var
       ) +
       scale_x_discrete(
-        breaks = every_nth(10)
+        breaks = every_nth(12)
       ) +
       theme_comp() +
       theme(
