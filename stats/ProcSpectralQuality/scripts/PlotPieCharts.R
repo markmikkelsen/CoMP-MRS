@@ -13,7 +13,7 @@ PlotPieCharts <- function(data, out_dir, plots_dir, show_pie_charts = TRUE, show
   # Custom color palette 
   pie_palette <- c(
     "#4C77C2",  # blue
-    "#EA7E2D",  # orange
+    "#4C77C2",  # orange
     "#A7A7A7",  # gray
     "#F2BE00",  # yellow
     "#5B9BD5",  # light blue

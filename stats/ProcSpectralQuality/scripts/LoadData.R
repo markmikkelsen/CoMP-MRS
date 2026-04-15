@@ -1,6 +1,8 @@
 # Load CoMP-MRS data and perform initial cleaning and outlier removal
 
-LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv", outl_rm_strategy = "group",  verbose = TRUE) {
+LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv",
+                     outl_rm_strategy = "group",
+                     verbose = TRUE) {
   
   # Load the participants.csv file with appropriate column types
   DATA <- read_csv(
@@ -22,23 +24,27 @@ LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv", outl_rm_strategy = 
       MRvoxelvolume = col_double(),
       MRaverages = col_double(),
       MRsoftwareversion = col_factor(),
-      MRcoildetail = col_factor(),
+      MRcoil = col_factor(),
       MRSsw = col_double(),
       MRSnpts = col_double(),
       MRSTE = col_double(),
       MRSTR = col_double(),
-      MRSshimmethod = col_factor(),
       LW = col_double(),
       SNR = col_double(),
       SNR_LW_Ratio = col_double(),
-      CompCheck = col_factor()
+      CompCheck = col_factor(),
+      MRSshim = col_factor(),
+      Cryoprobe = col_logical()
     )
   )
   
   # Remove "compMR" prefix from CompID to make it more concise (optional)
+  # One subject has "Other" as a shim method; change to "MAPSHIM" for consistency with others in the DP
+  # Change "FASTMAP-FASTESTMAP" to "FAST(EST)MAP" for consistency with others in the DP
   DATA <- DATA %>%
-    mutate(CompID = str_remove_all(CompID, "compMR"))
-  
+    mutate(CompID = as.factor(str_remove_all(CompID, "compMR"))) %>%
+    mutate(MRSshim = as.factor(if_else(MRSshim == "Other", "MAPSHIM", MRSshim))) %>%
+    mutate(MRSshim = as.factor(if_else(MRSshim == "FASTMAP-FASTESTMAP", "FAST(EST)MAP", MRSshim)))
   
   # Spectral quality metrics and normalization --------------------------------
   
@@ -75,7 +81,7 @@ LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv", outl_rm_strategy = 
     verbose = verbose
   )
   DATA_orig <- DATA
-  DATA <- DATA_clean$data_clean # Update DATA to the cleaned dataset
+  DATA      <- DATA_clean$data_clean # Update DATA to the cleaned dataset
   
   # Optional but recommended:
   # aggregate to one row per DP for cleaner plots
