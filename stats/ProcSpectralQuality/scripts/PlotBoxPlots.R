@@ -11,7 +11,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
 
   # Box plot function ---------------------------------------------------------
 
-  make_box_plot <- function(data, x_var, y_var, y_label, group_var, out_dir, file_name) {
+  make_box_plot <- function(data, x_var, y_var, y_label, out_dir, file_name) {
     
     every_nth <- function(n) {
       function(x) x[seq(1, length(x), by = n)]
@@ -20,8 +20,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
     plot_data <- data %>%
       dplyr::filter(
         !is.na(.data[[x_var]]),
-        !is.na(.data[[y_var]]),
-        !is.na(.data[[group_var]])
+        !is.na(.data[[y_var]])
       ) %>%
       dplyr::mutate(
         !!x_var := factor(.data[[x_var]], levels = sort(unique(.data[[x_var]])))
@@ -109,7 +108,6 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
         x_var = x,
         y_var = y$var,
         y_label = y$label,
-        group_var = "DP",
         out_dir = out_dir,
         file_name = file_name
       )

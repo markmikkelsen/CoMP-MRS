@@ -16,10 +16,10 @@ ExtractVPCs <- function(models, digits = 1, verbose = TRUE) {
     #' @param verbose If TRUE, print a formatted table to the console (default: TRUE)
     #' @return A data frame with columns: grp, variance, vpc_pct
     
-    vc_df    <- as.data.frame(VarCorr(model))
-    groups   <- vc_df[["grp"]]
+    vc_df     <- as.data.frame(VarCorr(model))
+    groups    <- vc_df[["grp"]]
     variances <- vc_df[["vcov"]]
-    vpc_pct  <- round(variances / sum(variances) * 100, digits)
+    vpc_pct   <- round(variances / sum(variances) * 100, digits)
     
     result <- data.frame(
       grp      = groups,

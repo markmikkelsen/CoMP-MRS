@@ -14,7 +14,7 @@ PlotFacetBoxPlots <- function(data, out_dir, x_var, y_vars, facet_var) {
     }
   }
 
-  x_vars     <- normalize_var_list(x_var)
+  x_vars    <- normalize_var_list(x_var)
   facet_var <- normalize_var_list(facet_var)
 
   if (!dir.exists(out_dir)) {

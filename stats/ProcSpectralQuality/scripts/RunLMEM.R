@@ -23,8 +23,6 @@ RunLMEM <- function(data, dv = "", rand_ef = list(), fix_ef = "") {
     #' @param data           Data frame
     #' @param ...            Additional arguments passed to lmer()
     #' @return An lmerMod object
-    #' 
-    #' Created using Claude Opus 4.6 (2026-04-08)
     
     # --- validate inputs ---
     stopifnot(

@@ -41,7 +41,10 @@ packages <- c(
   "performance",
   "rAmCharts4",
   "htmlwidgets",
-  "lmerTest"
+  "lmerTest",
+  "modelsummary",
+  "flextable",
+  "officer"
 )
 
 load.packages(packages)
