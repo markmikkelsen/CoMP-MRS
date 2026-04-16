@@ -40,55 +40,55 @@ DescripStats <- function(data) {
     Product = make_stats(data, "SiteID", "SNR_LW_Product_norm", "Product")
   )
   
-  ### AnimalSpecies -----------------------------------------------------------
+  ### Species -----------------------------------------------------------
   
-  STATS$AnimalSpecies <- list(
-    LW      = make_stats(data, "AnimalSpecies", "LW_norm", "LW"),
-    SNR     = make_stats(data, "AnimalSpecies", "SNR_norm", "SNR"),
-    Ratio   = make_stats(data, "AnimalSpecies", "SNR_LW_Ratio_norm", "Ratio"),
-    Product = make_stats(data, "AnimalSpecies", "SNR_LW_Product_norm", "Product")
+  STATS$Species <- list(
+    LW      = make_stats(data, "Species", "LW_norm", "LW"),
+    SNR     = make_stats(data, "Species", "SNR_norm", "SNR"),
+    Ratio   = make_stats(data, "Species", "SNR_LW_Ratio_norm", "Ratio"),
+    Product = make_stats(data, "Species", "SNR_LW_Product_norm", "Product")
   )
   
-  ### MRvendor ----------------------------------------------------------------
+  ### Vendor ----------------------------------------------------------------
   
-  STATS$MRvendor <- list(
-    LW      = make_stats(data, "MRvendor", "LW_norm", "LW"),
-    SNR     = make_stats(data, "MRvendor", "SNR_norm", "SNR"),
-    Ratio   = make_stats(data, "MRvendor", "SNR_LW_Ratio_norm", "Ratio"),
-    Product = make_stats(data, "MRvendor", "SNR_LW_Product_norm", "Product")
+  STATS$Vendor <- list(
+    LW      = make_stats(data, "Vendor", "LW_norm", "LW"),
+    SNR     = make_stats(data, "Vendor", "SNR_norm", "SNR"),
+    Ratio   = make_stats(data, "Vendor", "SNR_LW_Ratio_norm", "Ratio"),
+    Product = make_stats(data, "Vendor", "SNR_LW_Product_norm", "Product")
   )
   
-  ### MRfield -----------------------------------------------------------------
+  ### FieldStrength -----------------------------------------------------------------
   
-  STATS$MRfield <- list(
-    LW      = make_stats(data, "MRfield", "LW_norm", "LW"),
-    SNR     = make_stats(data, "MRfield", "SNR_norm", "SNR"),
-    Ratio   = make_stats(data, "MRfield", "SNR_LW_Ratio_norm", "Ratio"),
-    Product = make_stats(data, "MRfield", "SNR_LW_Product_norm", "Product")
+  STATS$FieldStrength <- list(
+    LW      = make_stats(data, "FieldStrength", "LW_norm", "LW"),
+    SNR     = make_stats(data, "FieldStrength", "SNR_norm", "SNR"),
+    Ratio   = make_stats(data, "FieldStrength", "SNR_LW_Ratio_norm", "Ratio"),
+    Product = make_stats(data, "FieldStrength", "SNR_LW_Product_norm", "Product")
   )
   
-  ### MRsequence --------------------------------------------------------------
+  ### Sequence --------------------------------------------------------------
   
-  STATS$MRsequence <- list(
-    LW      = make_stats(data, "MRsequence", "LW_norm", "LW"),
-    SNR     = make_stats(data, "MRsequence", "SNR_norm", "SNR"),
-    Ratio   = make_stats(data, "MRsequence", "SNR_LW_Ratio_norm", "Ratio"),
-    Product = make_stats(data, "MRsequence", "SNR_LW_Product_norm", "Product")
+  STATS$Sequence <- list(
+    LW      = make_stats(data, "Sequence", "LW_norm", "LW"),
+    SNR     = make_stats(data, "Sequence", "SNR_norm", "SNR"),
+    Ratio   = make_stats(data, "Sequence", "SNR_LW_Ratio_norm", "Ratio"),
+    Product = make_stats(data, "Sequence", "SNR_LW_Product_norm", "Product")
   )
   
-  ### MRbrainregion -----------------------------------------------------------
+  ### VOI -----------------------------------------------------------
   
-  STATS$MRbrainregion <- list(
-    LW      = make_stats(data, "MRbrainregion", "LW_norm", "LW"),
-    SNR     = make_stats(data, "MRbrainregion", "SNR_norm", "SNR"),
-    Ratio   = make_stats(data, "MRbrainregion", "SNR_LW_Ratio_norm", "Ratio"),
-    Product = make_stats(data, "MRbrainregion", "SNR_LW_Product_norm", "Product")
+  STATS$VOI <- list(
+    LW      = make_stats(data, "VOI", "LW_norm", "LW"),
+    SNR     = make_stats(data, "VOI", "SNR_norm", "SNR"),
+    Ratio   = make_stats(data, "VOI", "SNR_LW_Ratio_norm", "Ratio"),
+    Product = make_stats(data, "VOI", "SNR_LW_Product_norm", "Product")
   )
   
-  ### AnimalSpecies x MRvendor ------------------------------------------------
+  ### Species x Vendor ------------------------------------------------
   
-  STATS$AnimalSpecies_MRvendor <- data %>%
-    dplyr::group_by(MRvendor, AnimalSpecies) %>%
+  STATS$Species_Vendor <- data %>%
+    dplyr::group_by(Vendor, Species) %>%
     dplyr::summarise(
       meanLW      = mean(LW_norm, na.rm = TRUE),
       sdLW        = sd(LW_norm, na.rm = TRUE),
@@ -105,10 +105,10 @@ DescripStats <- function(data) {
       .groups = "drop"
     )
   
-  ### AnimalSpecies x MRbrainregion -------------------------------------------
+  ### Species x VOI -------------------------------------------
   
-  STATS$AnimalSpecies_MRbrainregion <- data %>%
-    dplyr::group_by(AnimalSpecies, MRbrainregion) %>%
+  STATS$Species_VOI <- data %>%
+    dplyr::group_by(Species, VOI) %>%
     dplyr::summarise(
       meanLW      = mean(LW_norm, na.rm = TRUE),
       sdLW        = sd(LW_norm, na.rm = TRUE),
