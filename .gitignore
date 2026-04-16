@@ -9,4 +9,5 @@ stats/ProcSpectralQuality/scripts/.R*
 *.mat
 *.png
 *.fig
+*.csv
 
