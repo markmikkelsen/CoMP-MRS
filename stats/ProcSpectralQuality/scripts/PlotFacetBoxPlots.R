@@ -41,10 +41,13 @@ PlotFacetBoxPlots <- function(data, out_dir, x_var, y_vars, facet_var) {
         !is.na(.data[[y_var]]),
         !is.na(.data[[facet_var]])
       ) %>%
-      dplyr::arrange(.data[[facet_var]], .data[[x_var]]) %>%
       dplyr::mutate(
-        !!x_var    := as.factor(.data[[x_var]]),
-        !!facet_var := as.factor(.data[[facet_var]])
+        !!x_var := factor(
+          .data[[x_var]], levels = sort(unique(.data[[x_var]]))
+        ),
+        !!facet_var := factor(
+          .data[[facet_var]], levels = sort(unique(.data[[facet_var]]))
+        )
       )
 
     n_levels <- nlevels(plot_data[[x_var]])
@@ -118,7 +121,7 @@ PlotFacetBoxPlots <- function(data, out_dir, x_var, y_vars, facet_var) {
     for (x in x_vars) {
       for (y in y_vars) {
         file_name <- paste0(
-          "facet_boxplot_", y$var, "_by_", x$var, "_and_", f$var, ".png"
+          "facet_boxplot_", y$var, "_by_", x$var, "_and_", f$var, ".pdf"
         )
         key <- paste0(y$var, "_by_", x$var, "_and_", f$var)
 

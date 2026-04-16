@@ -23,9 +23,8 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
         !is.na(.data[[y_var]]),
         !is.na(.data[[group_var]])
       ) %>%
-      dplyr::arrange(.data[[group_var]], .data[[x_var]]) %>%
       dplyr::mutate(
-        !!x_var := factor(.data[[x_var]], levels = unique(.data[[x_var]]))
+        !!x_var := factor(.data[[x_var]], levels = sort(unique(.data[[x_var]])))
       )
     
     n_levels <- nlevels(plot_data[[x_var]])
@@ -102,7 +101,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
 
   for (y in y_vars) {
     for (x in x_vars) {
-      file_name <- paste0("boxplot_", y$var, "_by_", x, ".png")
+      file_name <- paste0("boxplot_", y$var, "_by_", x, ".pdf")
       key <- paste(y$var, x, sep = "_by_")
 
       all_boxplots[[key]] <- make_box_plot(

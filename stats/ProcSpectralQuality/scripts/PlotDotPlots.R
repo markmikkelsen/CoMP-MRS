@@ -23,9 +23,8 @@ PlotDotPlots <- function(data, data_orig, out_dir) {
         !is.na(.data[[y_var]]),
         !is.na(.data[[group_var]])
       ) %>%
-      dplyr::arrange(.data[[group_var]], .data[[x_var]]) %>%
       dplyr::mutate(
-        !!x_var := factor(.data[[x_var]], levels = unique(.data[[x_var]]))
+        !!x_var := factor(.data[[x_var]], levels = sort(unique(.data[[x_var]])))
       )
     
     p <- ggplot(
@@ -76,20 +75,20 @@ PlotDotPlots <- function(data, data_orig, out_dir) {
     data = data_orig,
     x_var = "CompID",
     y_var = "SNR_LW_Ratio_norm",
-    y_label = "Normalized SNR/LW ratio before outliers removal",
+    y_label = "Normalized SNR/LW ratio before outlier removal",
     group_var = "DP",
     out_dir = out_dir,
-    file_name = "dotplot_SNR_LW_Ratio_norm_by_Subj_orig.png"
+    file_name = "dotplot_SNR_LW_Ratio_norm_by_Subj_orig.pdf"
   )
   
   dotplot <- make_dot_plot(
     data = data,
     x_var = "CompID",
     y_var = "SNR_LW_Ratio_norm",
-    y_label = "Normalized SNR/LW ratio after outliers removal",
+    y_label = "Normalized SNR/LW ratio after outlier removal",
     group_var = "DP",
     out_dir = out_dir,
-    file_name = "dotplot_SNR_LW_Ratio_norm_by_Subj.png"
+    file_name = "dotplot_SNR_LW_Ratio_norm_by_Subj.pdf"
   )
   
 }

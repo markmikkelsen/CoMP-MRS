@@ -7,4 +7,5 @@ stats/ProcSpectralQuality/lme_example
 stats/ProcSpectralQuality/scripts/.R*
 stats/ProcSpectralQuality/data/derivatives/**/*.csv
 stats/ProcSpectralQuality/data/derivatives/**/*.png
+stats/ProcSpectralQuality/data/derivatives/**/*.pdf
 stats/ProcSpectralQuality/data/derivatives/plots/amcharts_pies/
