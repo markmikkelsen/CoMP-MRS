@@ -91,6 +91,7 @@ ExportModelTable <- function(models,
     statistic = "({std.error})",
     gof_map   = gof_map,
     add_rows  = vpc_rows,
+    align     = str_c(c("l", rep("l", length(models))), collapse = ""),
     title     = title,
     notes     = notes
   )
