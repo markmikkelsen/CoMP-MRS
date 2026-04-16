@@ -4,7 +4,7 @@
 #   Mark Mikkelsen, Ph.D. (mam4041@med.cornell.edu)
 #   Diana G. Rotaru, Ph.D. (diana.rotaru@meduniwien.ac.at)
 #
-# Last updated: 2026-04-15
+# Last updated: 2026-04-16
 
 # Initialize ------------------------------------------------------------------
 
@@ -59,15 +59,15 @@ source(file.path(base_dir, "scripts", "ExtractVPCs.R"))
 
 # Analysis options ------------------------------------------------------------
 
-save_csv               <- TRUE # Set to TRUE to save descriptive statistics tables as CSV files in the derivatives directory
+save_csv               <- FALSE # Set to TRUE to save descriptive statistics tables as CSV files in the derivatives directory
 show_pie_charts        <- FALSE # Set to TRUE to create pie charts of categorical variables (e.g., species
-show_amcharts          <- TRUE # Set to TRUE to create interactive 3D pie charts using amCharts4
+show_amcharts          <- FALSE # Set to TRUE to create interactive 3D pie charts using amCharts4
 show_dot_plots         <- TRUE # Set to TRUE to create dot plots of spectral quality metrics by different grouping variables
 show_box_plots         <- TRUE # Set to TRUE to create box plots of spectral quality metrics by different grouping variables
 show_facet_plots       <- TRUE # Set to TRUE to create facet plots of spectral quality metrics by different grouping variables
-show_model_diagnostics <- TRUE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
+show_model_diagnostics <- FALSE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
 calc_VPCs              <- TRUE # Set to TRUE to calculate variance partition coefficients (VPCs) from linear mixed-effects models to assess the proportion of variance explained by each random effect
-run_pbkrtest           <- TRUE # Set to TRUE to run parametric bootstrapping using the pbkrtest package 
+run_pbkrtest           <- FALSE # Set to TRUE to run parametric bootstrapping using the pbkrtest package 
                                # to compare linear mixed-effects models with different random effects structures
                                # and derive p-values for the added random effects (can be time-consuming with larger datasets)
 
@@ -156,23 +156,24 @@ if (show_box_plots) {
 
 if (show_facet_plots) {
   
-  x_vars <- list(
-    list(var = "DP", label = "Data Packet"),
-    list(var = "SiteID", label = "Site ID"),
-    list(var = "AnimalSpecies", label = "Animal Species"),
-    list(var = "Cryoprobe", label = "Cryoprobe"),
-    list(var = "MRSshim", label = "MRS shim method")
-  )
-
   y_vars <- list(
     # list(var = "LW_norm",             label = "Normalized LW"),
     # list(var = "SNR_norm",            label = "Normalized SNR"),
     # list(var = "SNR_LW_Product_norm", label = "Normalized SNR×LW product"),
     list(var = "SNR_LW_Ratio_norm",   label = "Normalized SNR/LW ratio")
   )
-  facet_vars <- list(
-    list(var = "MRsequence", label = "MRS sequence"),
+  
+  x_vars <- list(
+    list(var = "DP", label = "Data Packet"),
+    list(var = "SiteID", label = "Site ID"),
+    list(var = "AnimalSpecies", label = "Animal Species"),
+    list(var = "Cryoprobe", label = "Cryoprobe"),
+    list(var = "MRSshim", label = "MRS shim method"),
     list(var = "MRfield", label = "MR field strength")
+  )
+  
+  facet_vars <- list(
+    list(var = "MRsequence", label = "MRS sequence")
   )
 
   facet_plots <- PlotFacetBoxPlots(

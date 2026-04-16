@@ -23,9 +23,8 @@ PlotDotPlots <- function(data, data_orig, out_dir) {
         !is.na(.data[[y_var]]),
         !is.na(.data[[group_var]])
       ) %>%
-      dplyr::arrange(.data[[group_var]], .data[[x_var]]) %>%
       dplyr::mutate(
-        !!x_var := factor(.data[[x_var]], levels = unique(.data[[x_var]]))
+        !!x_var := factor(.data[[x_var]], levels = sort(unique(.data[[x_var]])))
       )
     
     p <- ggplot(
