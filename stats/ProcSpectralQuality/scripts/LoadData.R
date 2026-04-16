@@ -46,6 +46,13 @@ LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv",
     mutate(MRSshim = as.factor(if_else(MRSshim == "Other", "MAPSHIM", MRSshim))) %>%
     mutate(MRSshim = as.factor(if_else(MRSshim == "FASTMAP-FASTESTMAP", "FAST(EST)MAP", MRSshim)))
   
+  # Reorder all factors alphabetically / numerically ascending
+  DATA <- DATA %>%
+    mutate(across(where(is.factor), ~ fct_relevel(., sort(levels(.))))) %>%
+    mutate(MRbrainregion = fct_relevel(MRbrainregion, "Lhippocampus", "Rhippocampus", "Lstriatum", "Rstriatum")) %>%
+    mutate(MRsequence = fct_relevel(MRsequence, "LASER", "sLASER", "PRESS", "SPECIAL", "sSPECIAL", "STEAM")) %>%
+    mutate(Cryoprobe = factor(Cryoprobe, levels = c(TRUE, FALSE)))
+  
   # Spectral quality metrics and normalization --------------------------------
   
   DATA <- DATA %>%

@@ -102,7 +102,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
 
   for (y in y_vars) {
     for (x in x_vars) {
-      file_name <- paste0("boxplot_", y$var, "_by_", x, ".png")
+      file_name <- paste0("boxplot_", y$var, "_by_", x, ".pdf")
       key <- paste(y$var, x, sep = "_by_")
 
       all_boxplots[[key]] <- make_box_plot(

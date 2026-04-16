@@ -118,7 +118,7 @@ PlotFacetBoxPlots <- function(data, out_dir, x_var, y_vars, facet_var) {
     for (x in x_vars) {
       for (y in y_vars) {
         file_name <- paste0(
-          "facet_boxplot_", y$var, "_by_", x$var, "_and_", f$var, ".png"
+          "facet_boxplot_", y$var, "_by_", x$var, "_and_", f$var, ".pdf"
         )
         key <- paste0(y$var, "_by_", x$var, "_and_", f$var)
 
