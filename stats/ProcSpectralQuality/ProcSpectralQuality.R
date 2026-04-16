@@ -4,13 +4,18 @@
 #   Mark Mikkelsen, Ph.D. (mam4041@med.cornell.edu)
 #   Diana G. Rotaru, Ph.D. (diana.rotaru@meduniwien.ac.at)
 #
-# Last updated: 2026-04-15
+# AI Disclosure: Part of this code was generated using Claude Sonnet 4.6;
+# the authors then modified and extended the code as needed for the specific
+# analyses and visualizations in this project.
+#
+# Last updated: 2026-04-16
 
 # Initialize ------------------------------------------------------------------
 
 rm(list = ls()) # Clear the current environment
 try(dev.off(dev.list()["RStudioGD"]), silent = TRUE) # If using RStudio, this clears all plots
 cat("\014") # CTRL+L (clear console)
+
 
 # Set data directories --------------------------------------------------------
 
@@ -53,21 +58,20 @@ source(file.path(base_dir, "scripts", "PlotPieCharts.R"))
 source(file.path(base_dir, "scripts", "PlotDotPlots.R"))
 source(file.path(base_dir, "scripts", "PlotBoxPlots.R"))
 source(file.path(base_dir, "scripts", "PlotFacetBoxPlots.R"))
-source(file.path(base_dir, "scripts", "RunLMEM.R"))
-source(file.path(base_dir, "scripts", "ExtractVPCs.R"))
 
 
 # Analysis options ------------------------------------------------------------
 
-save_csv               <- TRUE # Set to TRUE to save descriptive statistics tables as CSV files in the derivatives directory
+save_csv               <- FALSE # Set to TRUE to save descriptive statistics tables as CSV files in the derivatives directory
 show_pie_charts        <- FALSE # Set to TRUE to create pie charts of categorical variables (e.g., species
-show_amcharts          <- TRUE # Set to TRUE to create interactive 3D pie charts using amCharts4
+show_amcharts          <- FALSE # Set to TRUE to create interactive 3D pie charts using amCharts4
 show_dot_plots         <- TRUE # Set to TRUE to create dot plots of spectral quality metrics by different grouping variables
 show_box_plots         <- TRUE # Set to TRUE to create box plots of spectral quality metrics by different grouping variables
 show_facet_plots       <- TRUE # Set to TRUE to create facet plots of spectral quality metrics by different grouping variables
-show_model_diagnostics <- TRUE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
+show_model_diagnostics <- FALSE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
 calc_VPCs              <- TRUE # Set to TRUE to calculate variance partition coefficients (VPCs) from linear mixed-effects models to assess the proportion of variance explained by each random effect
-run_pbkrtest           <- TRUE # Set to TRUE to run parametric bootstrapping using the pbkrtest package 
+export_model_table     <- TRUE # Set to TRUE to export a modelsummary comparison table of LMEM results to Word (.docx)
+run_pbkrtest           <- FALSE # Set to TRUE to run parametric bootstrapping using the pbkrtest package
                                # to compare linear mixed-effects models with different random effects structures
                                # and derive p-values for the added random effects (can be time-consuming with larger datasets)
 
@@ -132,14 +136,14 @@ if (show_box_plots) {
   x_vars <- c(
     "DP",
     "SiteID",
-    "AnimalSpecies",
-    "AnimalSex",
-    "MRvendor",
-    "MRfield",
-    "MRsequence",
-    "MRbrainregion",
+    "Species",
+    "Sex",
+    "Vendor",
+    "FieldStrength",
+    "Sequence",
+    "VOI",
     "Cryoprobe",
-    "MRSshim"
+    "ShimMethod"
   )
   
   all_boxplots <- PlotBoxPlots(
@@ -156,23 +160,24 @@ if (show_box_plots) {
 
 if (show_facet_plots) {
   
-  x_vars <- list(
-    list(var = "DP", label = "Data Packet"),
-    list(var = "SiteID", label = "Site ID"),
-    list(var = "AnimalSpecies", label = "Animal Species"),
-    list(var = "Cryoprobe", label = "Cryoprobe"),
-    list(var = "MRSshim", label = "MRS shim method")
-  )
-
   y_vars <- list(
     # list(var = "LW_norm",             label = "Normalized LW"),
     # list(var = "SNR_norm",            label = "Normalized SNR"),
     # list(var = "SNR_LW_Product_norm", label = "Normalized SNR×LW product"),
     list(var = "SNR_LW_Ratio_norm",   label = "Normalized SNR/LW ratio")
   )
+  
+  x_vars <- list(
+    list(var = "DP", label = "Data Packet"),
+    list(var = "SiteID", label = "Site ID"),
+    list(var = "Species", label = "Species"),
+    list(var = "Cryoprobe", label = "Cryoprobe"),
+    list(var = "ShimMethod", label = "Shim method"),
+    list(var = "FieldStrength", label = "Field strength")
+  )
+  
   facet_vars <- list(
-    list(var = "MRsequence", label = "MRS sequence"),
-    list(var = "MRfield", label = "MR field strength")
+    list(var = "Sequence", label = "MRS sequence")
   )
 
   facet_plots <- PlotFacetBoxPlots(
@@ -188,6 +193,10 @@ if (show_facet_plots) {
 
 # Run linear mixed-effects modeling -------------------------------------------
 
+source(file.path(base_dir, "scripts", "RunLMEM.R"))
+source(file.path(base_dir, "scripts", "ExtractVPCs.R"))
+source(file.path(base_dir, "scripts", "ExportModelTable.R"))
+
 LMEM_MODELS <- list() # Initialize list to store LMEM models
 
 ### Variables -----------------------------------------------------------------
@@ -196,7 +205,7 @@ dv <- "SNR_LW_Ratio_norm"
 
 random_effects <- list(
   M.0.a = list(
-    MRvendor = "1"
+    Vendor = "1"
   ),
   M.0.b = list(
     SiteID = "1"
@@ -208,21 +217,35 @@ random_effects <- list(
     DP = "1",
     SiteID = "1"
   ),
+  M.0.e = list(
+    DP = "1",
+    ShimMethod = "1"
+  ),
+  M.0.f = list(
+    DP = "1",
+    Cryoprobe = "1"
+  ),
   M.1.a = list(
     DP = "1",
-    AnimalSpecies = "1"
+    Species = "1"
   ),
   M.1.b = list(
     DP = "1",
-    MRbrainregion = "1"
+    VOI = "1"
+  ),
+  M.1.c = list(
+    DP = "1",
+    Sequence = "1"
   )
 )
 
-fixed_effects <- list()
+fixed_effects <- list(
+  
+)
 
-### Null model with no random effects (for comparison with models with random effects)
+### Null model with no random effects -----------------------------------------
 
-LMEM_MODELS$M.null <- lm(
+M.null <- lm(
   formula = as.formula(paste(dv, "~ 1")),
   data = DATA$data
 )
@@ -247,19 +270,18 @@ names(LMEM_MODELS) <- names(random_effects)
 ### Model diagnostics ---------------------------------------------------------
 
 if (show_model_diagnostics) {
-  
   LMEM_MODELS.diagnostics <- lapply(names(random_effects), function(model_name) {
     model <- LMEM_MODELS[[model_name]]
     diagnostics <- list(
       random_effects = ranef(model, condVar = TRUE),
       random_effects.plot <- dotplot(ranef(model, condVar = TRUE), scales = "free"),
       model_performance = model_performance(model),
-      check_model = check_model(model)
+      check_model = check_model(model),
+      check_singularity = check_singularity(model)
     )
     return(diagnostics)
   })
   names(LMEM_MODELS.diagnostics) <- names(random_effects)
-
 }
 
 ### Variance partitioning -----------------------------------------------------
@@ -270,7 +292,7 @@ if (calc_VPCs) {
 
 ### Inference by LRT with parametric bootstrapping ----------------------------
 
-# Compare large model with smaller model to derive p-value for added random effect (e.g., MRsequence)
+# Compare large model with smaller model to derive p-value for added random effect (e.g., Sequence)
 # Note, models have to be fitted with REML = FALSE for valid comparison by LRT,
 # and this can be time-consuming with larger datasets
 # if (run_pbkrtest) {
@@ -290,7 +312,15 @@ if (calc_VPCs) {
 # boot.ci(b.par1, conf=0.95, type="perc", index=1)
 # boot.ci(b.par2, conf=0.95, type="perc", index=1)
 
+### Export LMEM model comparison table to Word --------------------------------
 
+if (export_model_table) {
+  MODEL_TABLE <- ExportModelTable(
+    models  = c(list(M.null = M.null), LMEM_MODELS),
+    vpcs    = if (calc_VPCs) VPCs else NULL,
+    out_dir = deriv_dir
+  )
+}
 
 
 

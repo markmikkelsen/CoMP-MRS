@@ -38,12 +38,12 @@ SaveCSV <- function(data, out_dir) {
   write_csv(data$MRbrainregion$Product, file.path(out_dir, "stats_MRbrainregion_Product.csv"))
   
   write_csv(
-    data$AnimalSpecies_MRvendor,
+    data$Species_Vendor,
     file.path(out_dir, "stats_AnimalSpecies_MRvendor.csv")
   )
   
   write_csv(
-    data$AnimalSpecies_MRbrainregion,
+    data$Species_VOI,
     file.path(out_dir, "stats_AnimalSpecies_MRbrainregion.csv")
   )
   

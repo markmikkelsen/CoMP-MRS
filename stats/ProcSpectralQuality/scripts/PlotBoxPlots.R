@@ -11,7 +11,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
 
   # Box plot function ---------------------------------------------------------
 
-  make_box_plot <- function(data, x_var, y_var, y_label, group_var, out_dir, file_name) {
+  make_box_plot <- function(data, x_var, y_var, y_label, out_dir, file_name) {
     
     every_nth <- function(n) {
       function(x) x[seq(1, length(x), by = n)]
@@ -20,12 +20,10 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
     plot_data <- data %>%
       dplyr::filter(
         !is.na(.data[[x_var]]),
-        !is.na(.data[[y_var]]),
-        !is.na(.data[[group_var]])
+        !is.na(.data[[y_var]])
       ) %>%
-      dplyr::arrange(.data[[group_var]], .data[[x_var]]) %>%
       dplyr::mutate(
-        !!x_var := factor(.data[[x_var]], levels = unique(.data[[x_var]]))
+        !!x_var := factor(.data[[x_var]], levels = sort(unique(.data[[x_var]])))
       )
     
     n_levels <- nlevels(plot_data[[x_var]])
@@ -102,7 +100,7 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
 
   for (y in y_vars) {
     for (x in x_vars) {
-      file_name <- paste0("boxplot_", y$var, "_by_", x, ".png")
+      file_name <- paste0("boxplot_", y$var, "_by_", x, ".pdf")
       key <- paste(y$var, x, sep = "_by_")
 
       all_boxplots[[key]] <- make_box_plot(
@@ -110,7 +108,6 @@ PlotBoxPlots <- function(data, out_dir, y_vars, x_vars) {
         x_var = x,
         y_var = y$var,
         y_label = y$label,
-        group_var = "DP",
         out_dir = out_dir,
         file_name = file_name
       )
