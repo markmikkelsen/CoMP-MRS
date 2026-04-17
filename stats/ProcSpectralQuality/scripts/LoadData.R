@@ -1,11 +1,12 @@
 # Load CoMP-MRS data and perform initial cleaning and outlier removal
 
-LoadData <- function(
-  csv_file = "CoMP_MRS_Rstats_input.csv",
-  outl_rm_strategy = "group",
-  verbose = TRUE
+LoadData <- function(csv_file = "CoMP_MRS_Rstats_input.csv",
+                     outl_rm_strategy = "group",
+                     verbose = TRUE
 ) {
+  
   # Load the participants.csv file with appropriate column types --------------
+  
   DATA <- read_csv(
     file = csv_file,
     col_types = list(
@@ -39,8 +40,8 @@ LoadData <- function(
     )
   )
 
-  # Change variable names to be more concise and consistent, while still being
-  # descriptive
+  # Change variable names -----------------------------------------------------
+  
   DATA <- DATA %>%
     rename(
       Vendor = MRvendor,
@@ -58,9 +59,12 @@ LoadData <- function(
       SoftwareVer = MRsoftwareversion
     )
   
-  # Remove DP01 (example only)
+  # Remove DP01 (example only) ------------------------------------------------
+  
   DATA <- DATA %>%
     filter(DP != "DP01") 
+  
+  # Rename some data entries --------------------------------------------------
   
   # Remove "compMR" prefix from CompID to make it more concise (optional)
   # One subject has "Other" as a shim method; change to "MAPSHIM" for
@@ -68,19 +72,18 @@ LoadData <- function(
   # Change "FASTMAP-FASTESTMAP" to "FAST(EST)MAP" for consistency with others
   # in the DP
   DATA <- DATA %>%
-    mutate(CompID = as.factor(str_remove_all(CompID, "compMR"))) %>%
+    mutate(
+      CompID = as.factor(str_remove_all(CompID, "compMR"))
+    ) %>%
     mutate(
       ShimMethod = as.factor(if_else(ShimMethod == "Other", "MAPSHIM", ShimMethod))
     ) %>%
     mutate(
-      ShimMethod = as.factor(if_else(
-        ShimMethod == "FASTMAP-FASTESTMAP",
-        "FASTESTMAP",
-        ShimMethod
-      ))
+      ShimMethod = as.factor(if_else(ShimMethod == "FASTMAP-FASTESTMAP", "FASTESTMAP", ShimMethod))
     )
   
-  # Reorder all factors alphabetically / numerically ascending
+  # Reorder all factors alphabetically / numerically ascending ----------------
+  
   DATA <- DATA %>%
     mutate(across(where(is.factor), ~ fct_relevel(., sort(levels(.))))) %>%
     mutate(
@@ -169,4 +172,5 @@ LoadData <- function(
       data_by_dp = DATA_DP
     )
   )
+  
 }

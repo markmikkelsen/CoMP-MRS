@@ -71,10 +71,8 @@ show_facet_plots       <- TRUE # Set to TRUE to create facet plots of spectral q
 show_model_diagnostics <- TRUE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
 calc_VPCs              <- TRUE # Set to TRUE to calculate variance partition coefficients (VPCs) from linear mixed-effects models to assess the proportion of variance explained by each random effect
 export_model_table     <- TRUE # Set to TRUE to export a modelsummary comparison table of LMEM results to Word (.docx)
-run_pbkrtest           <- FALSE # Set to TRUE to run parametric bootstrapping using the pbkrtest package
-                               # to compare linear mixed-effects models with different random effects structures
-                               # and derive p-values for the added random effects (can be time-consuming with larger datasets)
-
+run_LRTs               <- TRUE # Set to TRUE to run likelihood ratio tests (LRTs) to compare linear mixed-effects models with different random effects structures and derive p-values for the added random effects
+run_pbkrtest           <- FALSE # Set to TRUE to run parametric bootstrapping using the pbkrtest package to compare linear mixed-effects models with different random effects structures and derive p-values for the added random effects (can be time-consuming with larger datasets)
 
 # Load data -------------------------------------------------------------------
 # Also clean up data (incl. outlier removal) and create new variables (e.g., normalized SNR/LW ratio)
@@ -118,19 +116,18 @@ if (show_dot_plots) {
     data = DATA$data,
     data_orig = DATA$data_orig,
     out_dir = file.path(plots_dir, "dot_plots")
-    )
+  )
 }
 
 
 # Plot box plots --------------------------------------------------------------
 
 if (show_box_plots) {
-  
   y_vars <- list(
     #list(var = "LW_norm",             label = "Normalized LW"),
     #list(var = "SNR_norm",            label = "Normalized SNR"),
     #list(var = "SNR_LW_Product_norm", label = "Normalized SNR×LW product"),
-    list(var = "SNR_LW_Ratio_norm",   label = "Normalized SNR/LW ratio")
+    list(var = "SNR_LW_Ratio_norm", label = "Normalized SNR/LW ratio")
   )
   
   x_vars <- c(
@@ -162,17 +159,15 @@ if (show_box_plots) {
   all_boxplots <- PlotBoxPlots(
     data = DATA$data,
     out_dir = file.path(plots_dir, "box_plots"),
-    y_vars = y_vars,
-    x_vars = x_vars
+    y_vars  = y_vars,
+    x_vars  = x_vars
   )
-  
 }
 
 
 # Plot faceted box plots ------------------------------------------------------
 
 if (show_facet_plots) {
-  
   y_vars <- list(
     # list(var = "LW_norm",             label = "Normalized LW"),
     # list(var = "SNR_norm",            label = "Normalized SNR"),
@@ -192,7 +187,7 @@ if (show_facet_plots) {
   facet_vars <- list(
     list(var = "Sequence", label = "MRS sequence")
   )
-
+  
   facet_plots <- PlotFacetBoxPlots(
     data      = DATA$data,
     out_dir   = file.path(plots_dir, "facet_box_plots"),
@@ -200,23 +195,25 @@ if (show_facet_plots) {
     y_var     = y_vars,
     facet_var = facet_vars
   )
-
 }
 
 
 # Run linear mixed-effects modeling -------------------------------------------
 
 source(file.path(base_dir, "scripts", "RunLMEM.R"))
-source(file.path(base_dir, "scripts", "ExtractVPCs.R"))
-source(file.path(base_dir, "scripts", "ExportModelTable.R"))
 
 LMEM_MODELS <- list() # Initialize list to store LMEM models
 
-### Variables -----------------------------------------------------------------
+# Variables
 
 dv <- "SNR_LW_Ratio_norm"
 
 random_effects <- list(
+  M.0 = list(
+    DP = "1",
+    SiteID = "1",
+    Vendor = "1"
+  ),
   M.0.a = list(
     Vendor = "1"
   ),
@@ -230,111 +227,146 @@ random_effects <- list(
     DP = "1",
     SiteID = "1"
   ),
-  M.0.e = list(
+  M.1 = list(
     DP = "1",
-    ShimMethod = "1"
-  ),
-  M.0.f = list(
-    DP = "1",
-    Cryoprobe = "1"
+    SiteID = "1",
+    Vendor = "1",
+    Species = "1"
   ),
   M.1.a = list(
     DP = "1",
-    Species = "1"
+    ShimMethod = "1"
   ),
   M.1.b = list(
     DP = "1",
-    VOI = "1"
+    Cryoprobe = "1"
   ),
   M.1.c = list(
     DP = "1",
+    Species = "1"
+  ),
+  M.1.d = list(
+    DP = "1",
+    VOI = "1"
+  ),
+  M.1.e = list(
+    DP = "1",
     Sequence = "1"
+  ),
+  M.1.f = list(
+    DP = "1"
+  ),
+  M.1.g = list(
+    DP = "1"
+  ),
+  M.1.h = list(
+    DP = "1"
+  ),
+  M.2 = list(
+    DP = "1",
+    Sequence = "1",
+    Cryoprobe = "1"
   )
 )
 
 fixed_effects <- list(
-  
+  M.1.f = c("FieldStrength"),
+  M.1.g = c("Age"),
+  M.1.h = c("Sex")
 )
 
-### Null model with no random effects -----------------------------------------
+# # Null model with no random effects
+# 
+# M.null <- lm(
+#   formula = as.formula(paste(dv, "~ 1")),
+#   data = DATA$data
+# )
 
-M.null <- lm(
-  formula = as.formula(paste(dv, "~ 1")),
-  data = DATA$data
-)
-
-### Run LMEM models -----------------------------------------------------------
+# Run LMEM models
 
 LMEM_MODELS <- lapply(names(random_effects), function(model_name) {
+  
   if (is_empty(fixed_effects[[model_name]])) {
     fix_ef <- ""
   } else {
     fix_ef = fixed_effects[[model_name]]
   }
+  
   RunLMEM(
     data = DATA$data,
     dv = dv,
     rand_ef = random_effects[[model_name]],
     fix_ef = fix_ef
   )
+  
 })
+
 names(LMEM_MODELS) <- names(random_effects)
 
 ### Model diagnostics ---------------------------------------------------------
 
 if (show_model_diagnostics) {
-  LMEM_MODELS.diagnostics <- lapply(names(random_effects), function(model_name) {
-    model <- LMEM_MODELS[[model_name]]
-    diagnostics <- list(
-      random_effects = ranef(model, condVar = TRUE),
-      random_effects.plot <- dotplot(ranef(model, condVar = TRUE), scales = "free"),
-      model_performance = model_performance(model),
-      check_model = check_model(model),
-      check_singularity = check_singularity(model)
-    )
-    return(diagnostics)
-  })
+  
+  LMEM_MODELS.diagnostics <- lapply(
+    names(random_effects),
+    function(model_name) {
+      model <- LMEM_MODELS[[model_name]]
+      diagnostics <- list(
+        random_effects      = ranef(model, condVar = TRUE),
+        random_effects.plot = dotplot(ranef(model, condVar = TRUE), scales = "free"),
+        model_performance   = model_performance(model),
+        check_model         = check_model(model),
+        check_singularity   = check_singularity(model)
+      )
+      return(diagnostics)
+    }
+  )
+  
   names(LMEM_MODELS.diagnostics) <- names(random_effects)
+  
 }
 
 ### Variance partitioning -----------------------------------------------------
 
+source(file.path(base_dir, "scripts", "ExtractVPCs.R"))
+
 if (calc_VPCs) {
-  VPCs <- ExtractVPCs(LMEM_MODELS, verbose = TRUE)
+  VPCs <- ExtractVPCs(LMEM_MODELS, verbose = FALSE)
 }
 
 ### Inference by LRT with parametric bootstrapping ----------------------------
-
-# Compare large model with smaller model to derive p-value for added random effect (e.g., Sequence)
+# Compare large model with smaller model to derive p-value for added random 
+# effect (e.g., Sequence)
 # Note, models have to be fitted with REML = FALSE for valid comparison by LRT,
 # and this can be time-consuming with larger datasets
-# if (run_pbkrtest) {
-# 
-#   large_model <- LMEM_MODELS$M.SNRLWrationorm.0.5
-#   small_model <- LMEM_MODELS$M.SNRLWrationorm.0.1
-#   KR_results  <- pbkrtest::PBmodcomp(large_model, small_model, nsim = 1e3)
-#   print(KR_results)
-# 
-# }
 
-# Confidence intervals for fixed effects (intercept)
-# confint(Y.M1.3, parm=c(3,4), level = 0.95, method = "boot", nsim = 1e3, boot.type = "perc")
-# Bootstrapping
-# b.par1 <- bootMer(Y.M0.3, fixef, nsim=1e4)
-# b.par2 <- bootMer(Y.M1.3, fixef, nsim=1e4)
-# boot.ci(b.par1, conf=0.95, type="perc", index=1)
-# boot.ci(b.par2, conf=0.95, type="perc", index=1)
+source(file.path(base_dir, "scripts", "RunLRT.R"))
 
-### Export LMEM model comparison table to Word --------------------------------
+model_contrasts <- list(
+  small_models = c("M.0.b", "M.0.c", "M.0.c", "M.0.c", "M.1.e"),
+  large_models = c("M.0.d", "M.0.d", "M.1.b", "M.1.e", "M.2")
+)
 
-if (export_model_table) {
-  MODEL_TABLE <- ExportModelTable(
-    models  = c(list(M.null = M.null), LMEM_MODELS),
-    #vpcs    = if (calc_VPCs) VPCs else NULL,
-    vpcs    =  NULL,
-    out_dir = deriv_dir
+if (run_LRTs || run_pbkrtest) {
+  LRT_RESULTS <- RunLRT(
+    models          = LMEM_MODELS,
+    model_contrasts = model_contrasts,
+    run_LRTs        = run_LRTs,
+    run_pbkrtest    = run_pbkrtest,
+    verbose         = FALSE
   )
 }
 
 
+### Export LMEM model comparison table to Word --------------------------------
 
+source(file.path(base_dir, "scripts", "ExportModelTable.R"))
+
+if (export_model_table) {
+  MODEL_TABLE <- ExportModelTable(
+    # models = c(list(M.null = M.null), LMEM_MODELS),
+    models = LMEM_MODELS,
+    vpcs = if (calc_VPCs) VPCs else NULL,
+    out_dir = deriv_dir
+  )
+}
