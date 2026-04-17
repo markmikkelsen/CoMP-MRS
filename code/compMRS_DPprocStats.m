@@ -578,6 +578,8 @@ summaryTable = summaryTable(:, [coreCols, otherCols]);
 %% ------------------------------------------------------------------------
 % Create SHORT summary table (selected columns only)
 %% ------------------------------------------------------------------------
+%% This section of the code needs updates to match the formats and entries#
+%% in the table in figure 4 (boxplots)
 summaryShort = table();
 
 summaryShort.dataset           = summaryTable.dataset;
