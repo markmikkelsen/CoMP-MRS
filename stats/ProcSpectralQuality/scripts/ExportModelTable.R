@@ -15,7 +15,7 @@ ExportModelTable <- function(models,
                              vpcs     = NULL,
                              out_dir,
                              filename = "LMEM_table.docx",
-                             title    = "Linear Mixed-Effects Models: SNR/LW Ratio") {
+                             title    =  "Linear Mixed-Effects Models: Norm. SNR/LW") {
   #'
   #' Build a modelsummary comparison table from a named list of lm/lmerMod
   #' objects and export it as a Word-compatible .docx file.
@@ -91,9 +91,10 @@ ExportModelTable <- function(models,
     statistic = "({std.error})",
     gof_map   = gof_map,
     add_rows  = vpc_rows,
-    align     = str_c(c("l", rep("l", length(models))), collapse = ""),
+    #align     = str_c(c("l", rep("l", length(models))), collapse = ""),
     title     = title,
-    notes     = notes
+    notes     = notes,
+    shape     = model + term ~ statistic
   )
   
   # ── Light formatting ───────────────────────────────────────────────────────
@@ -104,7 +105,12 @@ ExportModelTable <- function(models,
   
   # ── Save to Word ───────────────────────────────────────────────────────────
   out_path <- file.path(out_dir, filename)
-  flextable::save_as_docx(tbl, path = out_path)
+  
+  sect_properties <- officer::prop_section(
+    page_size = officer::page_size(orient = "landscape")
+  )
+  
+  flextable::save_as_docx(tbl, path = out_path, pr_section = sect_properties)
 
   message("Model table exported to: ", out_path)
   invisible(tbl)

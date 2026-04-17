@@ -57,7 +57,11 @@ LoadData <- function(
       Weight = AnimalWeight,
       SoftwareVer = MRsoftwareversion
     )
-
+  
+  # Remove DP01 (example only)
+  DATA <- DATA %>%
+    filter(DP != "DP01") 
+  
   # Remove "compMR" prefix from CompID to make it more concise (optional)
   # One subject has "Other" as a shim method; change to "MAPSHIM" for
   # consistency with others in the DP
@@ -71,7 +75,7 @@ LoadData <- function(
     mutate(
       ShimMethod = as.factor(if_else(
         ShimMethod == "FASTMAP-FASTESTMAP",
-        "FAST(EST)MAP",
+        "FASTESTMAP",
         ShimMethod
       ))
     )
