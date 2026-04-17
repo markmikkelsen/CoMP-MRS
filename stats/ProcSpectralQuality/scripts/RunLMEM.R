@@ -41,12 +41,16 @@ RunLMEM <- function(data, dv = "", rand_ef = list(), fix_ef = "") {
     }
     
     # --- random-effects part ---
-    random_part <- vapply(names(random_effects), function(grp) {
-      slopes <- random_effects[[grp]]
-      if (is.null(slopes)) slopes <- "1"
-      terms <- paste(slopes, collapse = " + ")
-      sprintf("(%s | %s)", terms, grp)
-    }, character(1))
+    random_part <- vapply(
+      names(random_effects),
+      function(grp) {
+        slopes <- random_effects[[grp]]
+        if (is.null(slopes)) slopes <- "1"
+        terms <- paste(slopes, collapse = " + ")
+        sprintf("(%s | %s)", terms, grp)
+      },
+      character(1)
+    )
     
     random_part <- paste(random_part, collapse = " + ")
     
@@ -85,72 +89,6 @@ RunLMEM <- function(data, dv = "", rand_ef = list(), fix_ef = "") {
     REML = TRUE,
     control = optimToUse
   )
-  
-  
-  # M.SNRLWrationorm.0.1.a <- lme4::lmer(dv ~ (1 | MRbrainregion),
-  #                                      data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.0.1.b <- lme4::lmer(dv ~ (1 | MRsequence),
-  #                                      data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.0.2 <- lme4::lmer(dv ~ (1 | MRvendor), data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.0.3 <- lme4::lmer(dv ~ (1 | SiteID), data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.0.4 <- lme4::lmer(dv ~ (1 | DP) + (1 | SiteID), data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.0.full <- lme4::lmer(dv ~ (1 | DP),     # (1 | MRvendor) + (1 | SiteID) only account for negligible variance
-  #                                       data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.1.0 <- lme4::lmer(dv ~ (1 | AnimalSpecies) + (1 | DP), # (1 | AnimalSpecies) only accounts for negligible variance
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.2.0 <- lme4::lmer(dv ~ (1 | MRbrainregion) + (1 | DP), # (1 | MRbrainregion) only accounts for negligible variance
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.3.0 <- lme4::lmer(dv ~ (1 | MRsequence) + (1 | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.4.0 <- lme4::lmer(dv ~ MRfield + (1 | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.4.1 <- lme4::lmer(dv ~ MRfield + (MRfield | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.5.0 <- lme4::lmer(dv ~  AnimalAge + (1 | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.5.1 <- lme4::lmer(dv ~  AnimalAge + (AnimalAge | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.6.0 <- lme4::lmer(dv ~  AnimalSex + (1 | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  # M.SNRLWrationorm.6.1 <- lme4::lmer(dv ~  AnimalSex + (AnimalSex | DP),
-  #                                    data = data, REML = FALSE, control = optimToUse)
-  
-  
-
-  # Inferential tests ---------------------------------------------------------
-  
-  # Compare null model to model with DP random effect
-  # LRT.1 <- anova(M.SNRLWrationorm.0.full, M.SNRLWrationorm.3.0)
-  
-  # Bootstrapping confidence intervals for fixed effects (intercept)
-  # b.par1 <- bootMer(Y.M0.3, fixef, nsim = 1e4) # bootstrap fixed effects
-  # b.par2 <- bootMer(Y.M1.3, fixef, nsim = 1e4)
-  # boot.ci(b.par1, conf = 0.95, type = "bca", index = 1)
-  # boot.ci(b.par2, conf = 0.95, type = "bca", index = 1)
-  
-  # Alternative bootstrapping approach
-  # confint(M.SNRLWrationorm.4.0, parm = c(3,4), level = 0.95, method = "boot",
-  #         nsim = 500, boot.type = "perc")
-  
-  # if (run_pbkrtest) {
-  #   
-  #   # Set up parallel computation for bootstrapping
-  #   nc <- detectCores()
-  #   clus <- makeCluster(rep("localhost", nc))
-  #   clusterEvalQ(clus, {
-  #     library(lme4)
-  #     library(pbkrtest)
-  #   })
-  #   clusterExport(clus, c("nloptr", "defaultControl", "nloptFun",
-  #                         "data", "M.SNRLWrationorm.0.full", "M.SNRLWrationorm.3.0"))
-  #   
-  #   # Bootstrap likelihood ratio tests
-  #   PB_LRT.1 <- PBmodcomp(M.SNRLWrationorm.3.0, M.SNRLWrationorm.0.full, nsim = 2e3, cl = clus)
-  #   
-  #   stopCluster(clus)
-  #   
-  # }
-  
   return(M)
   
 }
