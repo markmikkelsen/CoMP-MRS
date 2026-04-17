@@ -360,9 +360,17 @@ if (run_LRTs || run_pbkrtest) {
 
 ### Export LMEM model comparison table to Word --------------------------------
 
+source(file.path(base_dir, "scripts", "ExportModelTable_old.R"))
 source(file.path(base_dir, "scripts", "ExportModelTable.R"))
 
 if (export_model_table) {
+  # MODEL_TABLE.old <- ExportModelTable_old(
+  #   # models = c(list(M.null = M.null), LMEM_MODELS),
+  #   models = LMEM_MODELS,
+  #   vpcs = if (calc_VPCs) VPCs else NULL,
+  #   out_dir = deriv_dir
+  # )
+  
   MODEL_TABLE <- ExportModelTable(
     # models = c(list(M.null = M.null), LMEM_MODELS),
     models = LMEM_MODELS,
