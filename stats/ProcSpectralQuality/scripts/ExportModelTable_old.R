@@ -11,13 +11,11 @@ glance_custom.lmerMod <- function(x, ...) {
   data.frame(r2.conditional = as.numeric(r2$R2_conditional))
 }
 
-ExportModelTable <- function(models,
-                             vpcs = NULL,
-                             out_dir = getwd(),
-                             filename = "LMEM_table.docx",
-                             title = flextable::as_paragraph(
-                               "Linear Mixed-Effects Models: SNR/LW",
-                               flextable::as_sub("norm"))) {
+ExportModelTable_old <- function(models,
+                                 vpcs = NULL,
+                                 out_dir,
+                                 filename = "LMEM_table_old.docx",
+                                 title = "Linear Mixed-Effects Models: Norm. SNR/LW") {
   #'
   #' Build a modelsummary comparison table from a named list of lm/lmerMod
   #' objects and export it as a Word-compatible .docx file.
@@ -25,13 +23,13 @@ ExportModelTable <- function(models,
   #' @param models   Named list of model objects (lm, lmerMod, etc.)
   #' @param vpcs     Named list of VPC data frames from ExtractVPCs() (optional).
   #'                 Names must match names(models). Models absent from vpcs
-  #'                 (e.g., lm null model) receive empty cells in VPC columns.
+  #'                 (e.g., lm null model) receive empty cells in VPC rows.
   #' @param out_dir  Directory in which to save the .docx file
-  #' @param filename Output filename (default: "LMEM_table_alt.docx")
+  #' @param filename Output filename (default: "LMEM_table.docx")
   #' @param title    Table title shown above the table
   #'
   #' @return Invisibly returns the flextable object
-
+  
   if (is.null(models) || length(models) == 0) {
     stop("No models provided. Please supply a named list of model objects.")
   }
@@ -39,78 +37,31 @@ ExportModelTable <- function(models,
   if (!dir.exists(out_dir)) {
     dir.create(out_dir, recursive = TRUE)
   }
-
+  
   # ── Goodness-of-fit rows to include ────────────────────────────────────────
   gof_map <- dplyr::tribble(
     ~raw,             ~clean,                  ~fmt,
     # "nobs",           "Observations",          "%.0f",
     "r2.conditional", "R\u00B2 (conditional)", "%.3f"
   )
-
-  # ── Determine VPC columns ──────────────────────────────────────────────────
-  all_grps      <- NULL
-  vpc_col_names <- NULL
+  
+  # ── Build VPC add_rows ─────────────────────────────────────────────────────
+  # add_rows must have 1 label column + 1 column per model (positional match).
+  # Empty string ("") is used where a grouping factor does not appear in a model.
+  vpc_rows <- NULL
   if (!is.null(vpcs) && length(vpcs) > 0) {
-    all_grps      <- unique(unlist(lapply(vpcs, function(df) df$grp)))
-    all_grps      <- c("Residual", setdiff(all_grps, "Residual"))
-    vpc_col_names <- paste0("VPC: ", all_grps)
-  }
-
-  # ── Notes ──────────────────────────────────────────────────────────────────
-  notes <- c(
-    "Standard errors in parentheses.",
-    "R\u00B2 (conditional) accounts for both fixed and random effects."
-  )
-  if (!is.null(vpc_col_names)) {
-    notes <- c(
-      notes,
-      "VPC = Variance partition coefficient (% of total variance attributed to each grouping factor)."
-    )
-  }
-
-  # ── Coefficient ordering: (Intercept), SD (Observations), then the rest ───
-  all_coefs <- unique(unlist(lapply(models, function(m) modelsummary::get_estimates(m)$term)))
-  priority  <- c("(Intercept)", "SD (Observations)")
-  coef_map  <- setNames(c(priority, setdiff(all_coefs, priority)),
-                        c(priority, setdiff(all_coefs, priority)))
-
-  # ── Build table ────────────────────────────────────────────────────────────
-  tbl <- modelsummary(
-    models,
-    output    = "flextable",
-    statistic = "p.value",
-    coef_map  = coef_map,
-    gof_map   = gof_map,
-    shape     = model + term ~ statistic,
-    title     = NULL,
-    # notes     = notes
-    notes     = NULL
-  )
-  tbl <- flextable::set_caption(tbl, caption = title)
-
-  # ── Inject VPC as additional statistic columns ─────────────────────────────
-  # shape = model + term ~ statistic produces body rows keyed by (model, term).
-  # VPC values are per-model, so each row belonging to a model receives the
-  # same VPC percentages. modelsummary blanks repeated model-name cells for
-  # visual merging, so we fill forward before looking up VPC data.
-  if (!is.null(vpc_col_names)) {
-    bd <- tbl$body$data
-
-    # col_keys[1] is the model-grouping column regardless of its internal name
-    orig_model_col <- bd[[tbl$col_keys[[1L]]]]
-    model_col <- orig_model_col
-    for (i in seq_len(length(model_col))[-1L]) {
-      if (nchar(trimws(model_col[[i]])) == 0L) {
-        model_col[[i]] <- model_col[[i - 1L]]
-      }
-    }
-
-    for (grp in all_grps) {
-      col_nm <- paste0("VPC: ", grp)
-      bd[[col_nm]] <- vapply(
-        seq_along(model_col), function(i) {
-          if (nchar(trimws(orig_model_col[[i]])) == 0L) return("")
-          vpc_df <- vpcs[[model_col[[i]]]]
+    n_models <- length(models)
+    model_names <- names(models)
+    
+    # All unique grouping factors across all VPC-containing models, preserving
+    # the order they first appear (Residual will naturally come last)
+    all_grps <- unique(unlist(lapply(vpcs, function(df) df$grp)))
+    
+    rows <- lapply(all_grps, function(grp) {
+      vals <- vapply(
+        model_names,
+        function(nm) {
+          vpc_df <- vpcs[[nm]]
           if (is.null(vpc_df)) return("")
           idx <- match(grp, vpc_df$grp)
           if (is.na(idx)) return("")
@@ -118,29 +69,57 @@ ExportModelTable <- function(models,
         },
         character(1)
       )
-    }
+      c(paste0("VPC: ", grp), unname(vals))
+    })
     
-    tbl <- flextable::flextable(
-      bd, col_keys = c(tbl$col_keys, vpc_col_names)
-    ) |>
-      flextable::theme_booktabs() |>
-      flextable::set_caption(caption = title) |>
-      flextable::add_footer_lines(values = notes)
+    vpc_rows <- as.data.frame(
+      do.call(rbind, rows),
+      stringsAsFactors = FALSE,
+      check.names      = FALSE
+    )
+    # Use positional column names ("1", "2", ...) to match modelsummary's
+    # internal column indexing rather than relying on display header names
+    colnames(vpc_rows) <- c("term", as.character(seq_len(n_models)))
   }
-
+  
+  # ── Notes ──────────────────────────────────────────────────────────────────
+  notes <- c(
+    "Standard errors in parentheses.",
+    "R\u00B2 (conditional) accounts for both fixed and random effects (performance::r2)."
+  )
+  if (!is.null(vpc_rows)) {
+    notes <- c(
+      notes,
+      "VPC = Variance partition coefficient (% of total variance attributed to each grouping factor)."
+    )
+  }
+  
+  # ── Build table ────────────────────────────────────────────────────────────
+  tbl <- modelsummary(
+    models,
+    output    = "flextable",
+    # statistic = "({std.error})",
+    statistic = "p.value",
+    gof_map   = gof_map,
+    add_rows  = vpc_rows,
+    align     = str_c(c("l", rep("l", length(models))), collapse = ""),
+    title     = title,
+    notes     = notes
+  )
+  
   # ── Light formatting ───────────────────────────────────────────────────────
   tbl <- tbl |>
     flextable::fontsize(size = 10, part = "all") |>
     flextable::font(fontname = "Arial", part = "all") |>
     flextable::set_table_properties(layout = "autofit")
-
+  
   # ── Save to Word ───────────────────────────────────────────────────────────
   out_path <- file.path(out_dir, filename)
   sect_properties <- officer::prop_section(
     page_size = officer::page_size(orient = "landscape")
   )
   flextable::save_as_docx(tbl, path = out_path, pr_section = sect_properties)
-
+  
   message("Model table exported to: ", out_path)
   invisible(tbl)
 }
