@@ -44,7 +44,8 @@ packages <- c(
   "lmerTest",
   "modelsummary",
   "flextable",
-  "officer"
+  "officer",
+  "svglite"
 )
 
 load.packages(packages)

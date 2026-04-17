@@ -68,7 +68,7 @@ show_amcharts          <- FALSE # Set to TRUE to create interactive 3D pie chart
 show_dot_plots         <- TRUE # Set to TRUE to create dot plots of spectral quality metrics by different grouping variables
 show_box_plots         <- TRUE # Set to TRUE to create box plots of spectral quality metrics by different grouping variables
 show_facet_plots       <- TRUE # Set to TRUE to create facet plots of spectral quality metrics by different grouping variables
-show_model_diagnostics <- FALSE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
+show_model_diagnostics <- TRUE # Set to TRUE to show model diagnostic plots (e.g., residuals, Q-Q plots) for linear mixed-effects models
 calc_VPCs              <- TRUE # Set to TRUE to calculate variance partition coefficients (VPCs) from linear mixed-effects models to assess the proportion of variance explained by each random effect
 export_model_table     <- TRUE # Set to TRUE to export a modelsummary comparison table of LMEM results to Word (.docx)
 run_pbkrtest           <- FALSE # Set to TRUE to run parametric bootstrapping using the pbkrtest package
@@ -145,6 +145,19 @@ if (show_box_plots) {
     "Cryoprobe",
     "ShimMethod"
   )
+  
+  DATA$data <- DATA$data %>%
+    dplyr::mutate(
+      VOI = stringr::str_replace_all(
+        VOI,
+        c(
+          "Rhippocampus" = "R-hipp",
+          "Lhippocampus" = "L-hipp",
+          "Rstriatum"    = "R-str",
+          "Lstriatum"    = "L-str"
+        )
+      )
+    )
   
   all_boxplots <- PlotBoxPlots(
     data = DATA$data,
@@ -317,7 +330,8 @@ if (calc_VPCs) {
 if (export_model_table) {
   MODEL_TABLE <- ExportModelTable(
     models  = c(list(M.null = M.null), LMEM_MODELS),
-    vpcs    = if (calc_VPCs) VPCs else NULL,
+    #vpcs    = if (calc_VPCs) VPCs else NULL,
+    vpcs    =  NULL,
     out_dir = deriv_dir
   )
 }

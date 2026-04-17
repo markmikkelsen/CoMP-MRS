@@ -14,3 +14,6 @@ stats/ProcSpectralQuality/data/derivatives/**/*.png
 stats/ProcSpectralQuality/data/derivatives/**/*.pdf
 stats/ProcSpectralQuality/data/derivatives/**/*.docx
 stats/ProcSpectralQuality/data/derivatives/plots/amcharts_pies/
+*.pdf
+*.svg
+*.xlsx
